@@ -20,9 +20,7 @@ namespace las {
 class public_header_block
 {
 public:
-    
-    // Easier access than from phb_header.
-    //
+        
     static const thx::int64 file_signature_length		= 4;
     static const thx::int64 guid_data_4_length			= 8;
     static const thx::int64 sys_identifier_length		= 32;
@@ -58,35 +56,35 @@ private:    // Header.
     public:
 
         _header()
-            : reserved     (0),
-              guid_data_1  (0), 
-              guid_data_2  (0), 
-              guid_data_3  (0),
-              version_major(1),				// NB: Always 1
-              version_minor(0),				// NB: Always 0
-              flight_date_julian(1),		// NB: 1st Jan.
-              year(0),						// NB: Default values.
-              header_size(static_cast<unsigned short>(size)),
-              offset_to_data(
-                  static_cast<unsigned short>(size + sizeof(unsigned short))),	
-              num_variable_length_records(0),
-              point_data_format_id(0), 
-              point_data_record_length(	// NB: Only ID supplied.
+            : reserved(0)
+            ,  guid_data_1(0) 
+            ,  guid_data_2(0) 
+            ,  guid_data_3(0)
+            ,  version_major(1)				// NB: Always 1
+            ,  version_minor(0)				// NB: Always 0
+            ,  flight_date_julian(1)		// NB: 1st Jan.
+            ,  year(0)						// NB: Default values.
+            ,  header_size(static_cast<unsigned short>(size))
+            ,  offset_to_data(
+                  static_cast<unsigned short>(size + sizeof(unsigned short)))	
+            ,  num_variable_length_records(0)
+            ,  point_data_format_id(0) 
+            ,  point_data_record_length(	// NB: Only ID supplied.
                   static_cast<unsigned short>(
-                      point_data_record_length(point_data_format_id))),	
-              num_point_records(0),
-              x_scale_factor   (1.0), 
-              y_scale_factor   (1.0), 
-              z_scale_factor   (1.0),
-              x_offset		   (0.0), 
-              y_offset		   (0.0), 
-              z_offset		   (0.0),
-              max_x			   (0.0), 
-              min_x			   (0.0),
-              max_y			   (0.0), 
-              min_y			   (0.0),
-              max_z			   (0.0), 
-              min_z			   (0.0)
+                      point_data_record_length(point_data_format_id)))	
+            ,  num_point_records(0)
+            ,  x_scale_factor(1.0) 
+            ,  y_scale_factor(1.0) 
+            ,  z_scale_factor(1.0)
+            ,  x_offset(0.0) 
+            ,  y_offset(0.0) 
+            ,  z_offset(0.0)
+            ,  max_x(1.0) 
+            ,  min_x(0.0)
+            ,  max_y(1.0) 
+            ,  min_y(0.0)
+            ,  max_z(1.0)
+            ,  min_z(0.0)
         {	
             file_signature[0] = 'L';
             file_signature[1] = 'A';
@@ -94,12 +92,19 @@ private:    // Header.
             file_signature[3] = 'F';
             
             // Fill arrays with zeros.
-            //
-            memset(guid_data_4   , 0, guid_data_4_length*sizeof(unsigned char));
-            memset(sys_identifier, 0, sys_identifier_length*sizeof(unsigned char));
-            memset(gen_software  , 0, gen_software_length*sizeof(unsigned char));
-            memset(num_points_by_return, 0, 
-                   num_points_by_return_length*sizeof(int));
+            
+            std::memset(guid_data_4, 
+                        0, 
+                        guid_data_4_length*sizeof(unsigned char));
+            std::memset(sys_identifier, 
+                        0, 
+                        sys_identifier_length*sizeof(unsigned char));
+            std::memset(gen_software, 
+                        0, 
+                        gen_software_length*sizeof(unsigned char));
+            std::memset(num_points_by_return, 
+                        0, 
+                        num_points_by_return_length*sizeof(int));
         }
 
         //! Copy CTOR.
@@ -124,37 +129,37 @@ private:    // Header.
 
     public:		// The data is the interface!
 
-        thx::int8    file_signature[file_signature_length];  
-        thx::uint32  reserved;							  
-        thx::uint32  guid_data_1;						  
-        thx::uint16  guid_data_2;						  
-        thx::uint16  guid_data_3;						  
-        thx::uint8   guid_data_4[guid_data_4_length];	  
-        thx::uint8   version_major;						  
-        thx::uint8   version_minor;						  
-        thx::int8    sys_identifier[sys_identifier_length];
-        thx::int8    gen_software[gen_software_length];	
-        thx::uint16  flight_date_julian;				 
-        thx::uint16  year;								 
-        thx::uint16  header_size;						 
-        thx::uint32  offset_to_data;					  
-        thx::uint32  num_variable_length_records;		  
-        thx::uint8   point_data_format_id;				  
-        thx::uint16  point_data_record_length;			  
-        thx::uint32  num_point_records;					  
-        thx::uint32  num_points_by_return[num_points_by_return_length];
-        thx::float64 x_scale_factor;					  
-        thx::float64 y_scale_factor;					  
-        thx::float64 z_scale_factor;					  
-        thx::float64 x_offset;							  
-        thx::float64 y_offset;							  
-        thx::float64 z_offset;							  
-        thx::float64 max_x;								  
-        thx::float64 min_x;								  
-        thx::float64 max_y;								  
-        thx::float64 min_y;								  
-        thx::float64 max_z;								  
-        thx::float64 min_z;								  
+        char    _file_signature[file_signature_length];  
+        unsigned int  reserved;							  
+        unsigned int guid_data_1;						  
+        unsigned short  guid_data_2;						  
+        unsigned short  guid_data_3;						  
+        unsigned char   guid_data_4[guid_data_4_length];	  
+        unsigned char   version_major;						  
+        unsigned char   version_minor;						  
+        char    sys_identifier[sys_identifier_length];
+        char    gen_software[gen_software_length];	
+        unsigned short  flight_date_julian;				 
+        unsigned short  year;								 
+        unsigned short  header_size;						 
+        unsigned int  offset_to_data;					  
+        unsigned int  num_variable_length_records;		  
+        unsigned char   point_data_format_id;				  
+        unsigned short  point_data_record_length;			  
+        unsigned int  num_point_records;					  
+        unsigned int  num_points_by_return[num_points_by_return_length];
+        double x_scale_factor;					  
+        double y_scale_factor;					  
+        double z_scale_factor;					  
+        double x_offset;							  
+        double y_offset;							  
+        double z_offset;							  
+        double max_x;								  
+        double min_x;								  
+        double max_y;								  
+        double min_y;								  
+        double max_z;								  
+        double min_z;								  
     };
 
 #ifdef WIN32
@@ -244,17 +249,27 @@ public:
     // Default copy & assign.
 
 
-    thx::int64 
+    std::size_t
     size_on_disk() const 
-    { 
-        return static_cast<thx::int64>(header::size + sizeof(thx::uint16)); 
-    }
+    { return static_cast<std::size_t>(header::size + sizeof(unsigned short)); }
 
-    thx::uint16 pre_point_data() const { return pre_point_data_; }
+    thx::uint16 
+    pre_point_data() const { return pre_point_data_; }
 
-    const thx::int8*  file_signature() const { return hdr_.file_signature; }
-    thx::uint32       reserved()       const { return hdr_.reserved;	   }
-    thx::uint32		  guid_data_1()    const { return hdr_.guid_data_1;    }
+public:     // Wrapper.
+
+    const char*  
+    file_signature() const 
+    { return _hdr.file_signature; }
+
+    unsigned int       
+    reserved() const 
+    { return _hdr.reserved; }
+
+    unsigned int		  
+    guid_data_1() const 
+    { return _hdr.guid_data_1; }
+
     thx::uint16		  guid_data_2()    const { return hdr_.guid_data_2;    }
     thx::uint16		  guid_data_3()    const { return hdr_.guid_data_3;    }
     const thx::uint8* guid_data_4()    const { return hdr_.guid_data_4;	   }
@@ -271,7 +286,8 @@ public:
     thx::float64	  x_offset()       const { return hdr_.x_offset;	   }
     thx::float64	  y_offset()	   const { return hdr_.y_offset;	   }
     thx::float64	  z_offset()	   const { return hdr_.z_offset;	   }
-    thx::float64	  max_x()		   const { return hdr_.max_x;		   }
+    
+    double	  max_x()		   const { return hdr_.max_x;		   }
     thx::float64	  min_x()		   const { return hdr_.min_x;		   }
     thx::float64	  max_y()		   const { return hdr_.max_y;		   }
     thx::float64	  min_y()		   const { return hdr_.min_y;		   }
@@ -280,27 +296,34 @@ public:
 
 
 
-    thx::uint16 flight_date_julian() const { return hdr_.flight_date_julian; }
+    unsigned short 
+    flight_date_julian() const 
+    { return _hdr.flight_date_julian; }
     
-    thx::uint32 num_variable_length_records() const 
-    { return hdr_.num_variable_length_records; }
+    unsigned int
+    num_variable_length_records() const 
+    { return _hdr.num_variable_length_records; }
     
-    thx::uint8 point_data_format_id() const 
-    { return hdr_.point_data_format_id; }
+    unsigned char 
+    point_data_format_id() const 
+    { return _hdr.point_data_format_id; }
     
-    thx::uint16 point_data_record_length() const 
-    { return hdr_.point_data_record_length; }
+    unsigned short 
+    point_data_record_length() const 
+    { return _hdr.point_data_record_length; }
     
-    thx::uint32 num_point_records() const 
-    { return hdr_.num_point_records; }
+    unsigned int 
+    num_point_records() const 
+    { return _hdr.num_point_records; }
     
-    const thx::uint32* num_points_by_return() const 
-    { return hdr_.num_points_by_return; }
+    const unsigned int* 
+    num_points_by_return() const 
+    { return _hdr.num_points_by_return; }
     
 private:	// Member variables.
 
-    header hdr_;
-    thx::uint16 pre_point_data_;
+    _header _hdr;
+    unsigned short pre_point_data_;
 };
 
 //------------------------------------------------------------------------------
@@ -328,20 +351,16 @@ operator<<(basic_ostream<CharT,Traits>    &os,
             << static_cast<int>(rhs.guid_data_2()) << "\n"
         << "GUID data 3                       : " 
             << static_cast<int>(rhs.guid_data_3()) << "\n"
-
         << "GUID data 4                       : '";
-    for(thx::int64 i = 0; 
-        i < salsa::las_public_header_block::guid_data_4_length; 
-        ++i)
-    {
-        os << static_cast<thx::int64>(rhs.guid_data_4()[i]);
+    for (int i(0); i < las::public_header_block::guid_data_4_length; ++i) {
+        os << static_cast<int>(rhs.guid_data_4()[i]);
     }
-    os	<< "'\n"
 
+    os	<< "'\n"
         << "Version Major                     : " 
-            << static_cast<thx::int64>(rhs.version_major()) << "\n"
+            << static_cast<int>(rhs.version_major()) << "\n"
         << "Version Minor                     : " 
-            << static_cast<thx::int64>(rhs.version_minor()) << "\n"
+            << static_cast<int>(rhs.version_minor()) << "\n"
         << "System Identifier                 : '" 
             << std::string(rhs.sys_identifier()) << "'\n"
         << "Generating Software               : '" 
@@ -358,17 +377,13 @@ operator<<(basic_ostream<CharT,Traits>    &os,
         << "Number of Variable Length Records : " 
             << rhs.num_variable_length_records() << "\n"
         << "Point Data Format ID              : " 
-            << static_cast<thx::int64>(rhs.point_data_format_id()) << "\n"
+            << static_cast<int>(rhs.point_data_format_id()) << "\n"
         << "Point Data Record Length          : " 
             << rhs.point_data_record_length() << "\n"
         << "Number of Point Records           : " 
             << rhs.num_point_records() << "\n"
         << "Number of Points by Return        :\n";
-
-    for(thx::int64 i = 0; 
-        i < salsa::las_public_header_block::num_points_by_return_length; 
-        ++i )
-    {
+    for (int i(0); i < las::public_header_block::num_points_by_return_length; ++i) {
         os	<< "Return[" << i + 1 << "]                         : "
                 << rhs.num_points_by_return()[i] << "\n";
     }
@@ -417,10 +432,9 @@ operator<<(basic_ostream<CharT,Traits>    &os,
     return os;
 }
 
-//=========================================================================
 }	// Namespace: std.
 
-#endif	// SALSA_LAS_PUBLIC_HEADER_BLOCK_HPP_INCLUDED
+#endif	// LAS_PUBLIC_HEADER_BLOCK_HPP_INCLUDED
 
 
 
