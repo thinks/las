@@ -13,5 +13,6 @@
 int
 main(int argc, char* argv[])
 {
+    std::cerr << "Hello las::\n";
     return 0;
 }
