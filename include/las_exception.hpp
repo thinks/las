@@ -38,7 +38,7 @@ public:
     //! Copy CTOR.
     base(const base &rhs) throw()
         : std::exception(rhs)
-        , _msg(rhs.msg)
+        , _msg(rhs._msg)
     {}
 
     //! Assign.
@@ -55,9 +55,9 @@ public:
     ~base() throw()
     {}
 
-	virtual const char* throw() 
+	virtual const char* 
     what() const throw() 
-    { return _what.c_str(); }
+    { return _msg.c_str(); }
 
 private:    // Member variables.
 

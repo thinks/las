@@ -29,11 +29,11 @@ namespace las {
 
 //------------------------------------------------------------------------------
 
-// las_point_data_record_format0
-// -----------------------------
+// point_data_record_format0
+// -------------------------
 //! DOCS
 
-class las_point_data_record_format0
+class point_data_record_format0
 {
 public:
 
@@ -148,9 +148,9 @@ private:    // Helper functions.
     static unsigned char 
     _valid_num_returns(const unsigned char nr)
     {
-        if( nr < min_num_returns ||
-            nr > las_public_header_block::num_points_by_return_length ) {	
-            SALSA_THROW(
+        if( nr < _min_num_returns ||
+            nr > public_header_block::num_points_by_return_length ) {	
+            LAS_THROW(
                 "las::PDRF0: invalid num_returns: " 
                     << static_cast<int>(nr) << " [min: "
                     << static_cast<int>(min_num_returns)
@@ -166,8 +166,8 @@ private:    // Helper functions.
     static unsigned char 
     _valid_return_num(const unsigned char rn, const unsigned char nr)
     {
-        if( rn < min_return_num || rn > nr ) {	
-            SALSA_THROW(
+        if( rn < _min_return_num || rn > nr ) {	
+            LAS_THROW(
                 "las::PDRF0: invalid return_num: " 
                     << static_cast<int>(rn) << " [min:" 
                     << static_cast<int>(min_return_num) 

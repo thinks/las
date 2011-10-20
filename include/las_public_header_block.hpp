@@ -8,7 +8,11 @@
 #ifndef LAS_PUBLIC_HEADER_BLOCK_HPP_INCLUDED
 #define LAS_PUBLIC_HEADER_BLOCK_HPP_INCLUDED
 
-//#include "salsa_static_assert.hpp"
+#include "las_types.hpp"
+#include "las_exception.hpp"
+#include "las_static_assert.hpp"
+#include <cstring>
+#include <algorithm>
 #include <iosfwd>
 
 //------------------------------------------------------------------------------
@@ -17,18 +21,27 @@ namespace las {
 
 //------------------------------------------------------------------------------
 
+#ifdef WIN32
+#pragma pack(push)
+#pragma pack(1)		// Alignment 1 byte
+#endif // WIN32
+
+//------------------------------------------------------------------------------
+
 class public_header_block
 {
 public:
         
-    static const thx::int64 file_signature_length		= 4;
-    static const thx::int64 guid_data_4_length			= 8;
-    static const thx::int64 sys_identifier_length		= 32;
-    static const thx::int64 gen_software_length			= 32;
-    static const thx::int64 num_points_by_return_length = 5;
+    static const int32 file_signature_length	   = 4;
+    static const int32 guid_data_4_length		   = 8;
+    static const int32 sys_identifier_length	   = 32;
+    static const int32 gen_software_length		   = 32;
+    static const int32 num_points_by_return_length = 5;
+
+    static const int32 size = 227;	// [bytes]
 
     static int 
-    point_data_record_length(const int id)
+    point_data_record_length(const int32 id)
     {
         switch (id) {
         case 0:
@@ -36,295 +49,251 @@ public:
         case 1:
             return 28;
         default:
-            SALSA_THROW("las::PHB: invalid PDRF id: " << static_cast<int>(id));
+            LAS_THROW("las::PHB: invalid PDRF id: " << static_cast<int32>(id));
         }
     }
 
-private:    // Header.
+public:
 
-#ifdef WIN32
-#pragma pack(push)
-#pragma pack(1)		// Alignment 1 byte
-#endif // WIN32
+    //! Empty CTOR.
+    public_header_block()
+        : _reserved(0)
+        , _guid_data_1(0) 
+        , _guid_data_2(0) 
+        , _guid_data_3(0)
+        , _version_major(1)				// NB: Always 1
+        , _version_minor(0)				// NB: Always 0
+        , _flight_date_julian(1)		// NB: 1st Jan.
+        , _year(0)						// NB: Default values.
+        , _header_size(static_cast<uint16>(size))
+        , _offset_to_data(static_cast<uint16>(size + sizeof(uint16)))	
+        , _num_variable_length_records(0)
+        , _point_data_format_id(0) 
+        , _point_data_record_length(	// NB: Only ID supplied.
+                static_cast<uint16>(
+                    point_data_record_length(_point_data_format_id)))	
+        , _num_point_records(0)
+        , _x_scale_factor(1.0) 
+        , _y_scale_factor(1.0) 
+        , _z_scale_factor(1.0)
+        , _x_offset(0.0) 
+        , _y_offset(0.0) 
+        , _z_offset(0.0)
+        , _max_x(1.0) 
+        , _min_x(0.0)
+        , _max_y(1.0) 
+        , _min_y(0.0)
+        , _max_z(1.0)
+        , _min_z(0.0)
+    {	
+        _file_signature[0] = 'L';
+        _file_signature[1] = 'A';
+        _file_signature[2] = 'S';
+        _file_signature[3] = 'F';
+            
+        // Fill arrays with zeros.
+            
+        std::memset(_guid_data_4, 0, guid_data_4_length*sizeof(int8));
+        std::memset(_sys_identifier, 0, sys_identifier_length*sizeof(int8));
+        std::memset(_gen_software, 0, gen_software_length*sizeof(int8));
+        std::memset(_num_points_by_return, 
+                    0, 
+                    num_points_by_return_length*sizeof(int32));
+    }
 
-    class _header
+    //! Copy CTOR.
+    public_header_block(const public_header_block &rhs) 
+    { *this = rhs; }
+
+
+    //! Assign.
+    public_header_block& 
+    operator=(const public_header_block &rhs)
     {
-    public:
+        std::copy(&rhs, &rhs + size, this); // Bit-wise copy.
+        return *this;
+    }
 
-        static const int size = 227;	// [bytes]
+    //! DTOR.
+    ~public_header_block() 
+    { 
+        LAS_STATIC_ASSERT(1 == sizeof(int8),    invalid_int8_size);
+        LAS_STATIC_ASSERT(1 == sizeof(uint8),   invalid_uint8_size);
+        LAS_STATIC_ASSERT(2 == sizeof(int16),   invalid_int16_size);
+        LAS_STATIC_ASSERT(2 == sizeof(uint16),  invalid_uint16_size);
+        LAS_STATIC_ASSERT(4 == sizeof(int32),   invalid_int32_size);
+        LAS_STATIC_ASSERT(4 == sizeof(uint32),  invalid_uint32_size);
+        LAS_STATIC_ASSERT(8 == sizeof(float64), invalid_float64_size);
+        LAS_STATIC_ASSERT(size == sizeof(public_header_block), 
+                          invalid_phb_size); 
+    }
 
-    public:
+public:
 
-        _header()
-            : reserved(0)
-            ,  guid_data_1(0) 
-            ,  guid_data_2(0) 
-            ,  guid_data_3(0)
-            ,  version_major(1)				// NB: Always 1
-            ,  version_minor(0)				// NB: Always 0
-            ,  flight_date_julian(1)		// NB: 1st Jan.
-            ,  year(0)						// NB: Default values.
-            ,  header_size(static_cast<unsigned short>(size))
-            ,  offset_to_data(
-                  static_cast<unsigned short>(size + sizeof(unsigned short)))	
-            ,  num_variable_length_records(0)
-            ,  point_data_format_id(0) 
-            ,  point_data_record_length(	// NB: Only ID supplied.
-                  static_cast<unsigned short>(
-                      point_data_record_length(point_data_format_id)))	
-            ,  num_point_records(0)
-            ,  x_scale_factor(1.0) 
-            ,  y_scale_factor(1.0) 
-            ,  z_scale_factor(1.0)
-            ,  x_offset(0.0) 
-            ,  y_offset(0.0) 
-            ,  z_offset(0.0)
-            ,  max_x(1.0) 
-            ,  min_x(0.0)
-            ,  max_y(1.0) 
-            ,  min_y(0.0)
-            ,  max_z(1.0)
-            ,  min_z(0.0)
-        {	
-            file_signature[0] = 'L';
-            file_signature[1] = 'A';
-            file_signature[2] = 'S';
-            file_signature[3] = 'F';
-            
-            // Fill arrays with zeros.
-            
-            std::memset(guid_data_4, 
-                        0, 
-                        guid_data_4_length*sizeof(unsigned char));
-            std::memset(sys_identifier, 
-                        0, 
-                        sys_identifier_length*sizeof(unsigned char));
-            std::memset(gen_software, 
-                        0, 
-                        gen_software_length*sizeof(unsigned char));
-            std::memset(num_points_by_return, 
-                        0, 
-                        num_points_by_return_length*sizeof(int));
-        }
+    const int8*  
+    file_signature() const 
+    { return _file_signature; }
 
-        //! Copy CTOR.
-        _header(const _header &rhs) 
-        { 
-            *this = rhs; 
-        }
+    uint32       
+    reserved() const 
+    { return _reserved; }
 
-        //! DTOR.
-        ~_header() 
-        { 
-            //SALSA_STATIC_ASSERT(size == sizeof(header), invalid_size); 
-        }
+    uint32		  
+    guid_data_1() const 
+    { return _guid_data_1; }
 
-        header& 
-        operator=(const header& rhs)
-        {	// Bit-wise copy.
-            //
-            memcpy(this, &rhs, size);
-            return *this;
-        }
+    uint16		  
+    guid_data_2() const 
+    { return _guid_data_2; }
 
-    public:		// The data is the interface!
+    uint16		  
+    guid_data_3() const 
+    { return _guid_data_3; }
 
-        char    _file_signature[file_signature_length];  
-        unsigned int  reserved;							  
-        unsigned int guid_data_1;						  
-        unsigned short  guid_data_2;						  
-        unsigned short  guid_data_3;						  
-        unsigned char   guid_data_4[guid_data_4_length];	  
-        unsigned char   version_major;						  
-        unsigned char   version_minor;						  
-        char    sys_identifier[sys_identifier_length];
-        char    gen_software[gen_software_length];	
-        unsigned short  flight_date_julian;				 
-        unsigned short  year;								 
-        unsigned short  header_size;						 
-        unsigned int  offset_to_data;					  
-        unsigned int  num_variable_length_records;		  
-        unsigned char   point_data_format_id;				  
-        unsigned short  point_data_record_length;			  
-        unsigned int  num_point_records;					  
-        unsigned int  num_points_by_return[num_points_by_return_length];
-        double x_scale_factor;					  
-        double y_scale_factor;					  
-        double z_scale_factor;					  
-        double x_offset;							  
-        double y_offset;							  
-        double z_offset;							  
-        double max_x;								  
-        double min_x;								  
-        double max_y;								  
-        double min_y;								  
-        double max_z;								  
-        double min_z;								  
-    };
+    const uint8* 
+    guid_data_4() const 
+    { return _guid_data_4; }
+
+    uint8		  
+    version_major() const 
+    { return _version_major;  }
+
+    uint8		  
+    version_minor() const 
+    { return _version_minor; }
+
+    const int8*  
+    sys_identifier() const 
+    { return _sys_identifier; }
+    
+    const int8*  
+    gen_software() const 
+    { return _gen_software; }
+
+    uint16
+    flight_date_julian() const 
+    { return _flight_date_julian; }
+
+    uint16       
+    year() const 
+    { return _year; }
+
+    uint16       
+    header_size() const 
+    { return _header_size; }
+
+    uint32       
+    offset_to_data() const 
+    { return _offset_to_data; }
+
+    float64	  
+    x_scale_factor() const 
+    { return _x_scale_factor; }
+
+    float64  
+    y_scale_factor() const 
+    { return _y_scale_factor; }
+
+    float64	  
+    z_scale_factor() const 
+    { return _z_scale_factor; }
+    
+    float64	  
+    x_offset() const 
+    { return _x_offset;	}
+
+    float64	  
+    y_offset() const 
+    { return _y_offset; }
+
+    float64	  
+    z_offset() const 
+    { return _z_offset;	}
+    
+    float64	  
+    max_x()	const 
+    { return _max_x; }
+
+    float64	  
+    min_x()	const 
+    { return _min_x; }
+
+    float64	  
+    max_y() const 
+    { return _max_y; }
+
+    float64	  
+    min_y() const 
+    { return _min_y; }
+
+    float64	  
+    max_z() const 
+    { return _max_z; }
+
+    float64	  
+    min_z()	const 
+    { return _min_z; }
+
+    uint32
+    num_variable_length_records() const 
+    { return _num_variable_length_records; }
+    
+    uint8 
+    point_data_format_id() const 
+    { return _point_data_format_id; }
+    
+    uint16 
+    point_data_record_length() const 
+    { return _point_data_record_length; }
+    
+    uint32 
+    num_point_records() const 
+    { return _num_point_records; }
+    
+    const uint32* 
+    num_points_by_return() const 
+    { return _num_points_by_return; }
+
+private:    // Member variables.
+
+    int8    _file_signature[file_signature_length]; // 4 [bytes] 
+    uint32  _reserved;							    // 4 [bytes]
+    uint32  _guid_data_1;						    // 4 [bytes]
+    uint16  _guid_data_2;						    // 2 [bytes]
+    uint16  _guid_data_3;						    // 2 [bytes]
+    uint8   _guid_data_4[guid_data_4_length];	    // 8 [bytes] 
+    uint8   _version_major;						    // 1 [bytes]
+    uint8   _version_minor;						    // 1 [bytes]
+    int8    _sys_identifier[sys_identifier_length]; // 32 [bytes]
+    int8    _gen_software[gen_software_length];	    // 32 [bytes]
+    uint16  _flight_date_julian;				    // 2 [bytes]
+    uint16  _year;								    // 2 [bytes]
+    uint16  _header_size;						    // 2 [bytes]
+    uint32  _offset_to_data;					    // 4 [bytes]
+    uint32  _num_variable_length_records;		    // 4 [bytes]
+    uint8   _point_data_format_id;				    // 1 [bytes]
+    uint16  _point_data_record_length;			    // 2 [bytes]
+    uint32  _num_point_records;					    // 4 [bytes]
+    uint32  _num_points_by_return[num_points_by_return_length]; // 20 [bytes]
+    float64 _x_scale_factor;					    // 8 [bytes]
+    float64 _y_scale_factor;					    // 8 [bytes]
+    float64 _z_scale_factor;					    // 8 [bytes]
+    float64 _x_offset;							    // 8 [bytes]
+    float64 _y_offset;							    // 8 [bytes]
+    float64 _z_offset;							    // 8 [bytes]
+    float64 _max_x;								    // 8 [bytes]
+    float64 _min_x;								    // 8 [bytes]
+    float64 _max_y;								    // 8 [bytes]
+    float64 _min_y;								    // 8 [bytes]
+    float64 _max_z;								    // 8 [bytes]
+    float64 _min_z;								    // 8 [bytes]
+};
+
+//------------------------------------------------------------------------------
 
 #ifdef WIN32
 #pragma pack(pop)	// pack(1)
 #endif  // WIN32
-
-public:
-
-    static const unsigned short valid_pre_point_value = 52445;// 0xCCDD = 52445.
-
-public:
-
-    //! CTOR.
-    public_header_block()
-        : _hdr()
-        , _pre_point_data(pre_point_value)
-    {}
-
-    explicit
-    public_header_block(const _header &hdr)
-        : hdr_(hdr),
-          pre_point_data_(las_public_header_block::pre_point_value)
-    {}
-
-    explicit
-    public_header_block(const std::string&              sys_id,
-                        const std::string&              gen_sw,
-                        const thx::uint8                pd_format,
-                        const thx::uint32               num_points,
-                        const std::vector<thx::uint32>& num_points_n,
-                        const thx::float64              scale_x,
-                        const thx::float64              scale_y,
-                        const thx::float64              scale_z,
-                        const thx::float64              offset_x,
-                        const thx::float64              offset_y,
-                        const thx::float64              offset_z,
-                        const thx::float64              max_x,
-                        const thx::float64              min_x,
-                        const thx::float64              max_y,
-                        const thx::float64              min_y,
-                        const thx::float64              max_z,
-                        const thx::float64              min_z)
-        : hdr_(),
-          pre_point_data_(las_public_header_block::pre_point_value)
-    {
-        memcpy(hdr_.sys_identifier, 
-               &sys_id[0], 
-               std::min<std::size_t>(sys_identifier_length, sys_id.size()));
-        hdr_.sys_identifier[sys_identifier_length - 1] = '\0';
-
-        memcpy(hdr_.gen_software,
-               &gen_sw[0], 
-               std::min<std::size_t>(gen_software_length, gen_sw.size()));
-        hdr_.gen_software[gen_software_length - 1] = '\0';
-
-        hdr_.point_data_format_id = pd_format;
-        hdr_.point_data_record_length 
-            = static_cast<thx::uint16>(point_data_record_lengths(pd_format));
-
-        hdr_.num_point_records = num_points;
-        for(size_t n(0); n < num_points_n.size(); ++n)
-        {
-            if( n < 5 )
-            {
-                hdr_.num_points_by_return[n] = num_points_n[n];
-            }
-        }
-
-        hdr_.x_scale_factor = scale_x;
-        hdr_.y_scale_factor = scale_y;
-        hdr_.z_scale_factor = scale_z;
-        hdr_.x_offset = offset_x;
-        hdr_.y_offset = offset_y;
-        hdr_.z_offset = offset_z;
-        hdr_.max_x = max_x;
-        hdr_.min_x = min_x;
-        hdr_.max_y = max_y;
-        hdr_.min_y = min_y;
-        hdr_.max_z = max_z;
-        hdr_.min_z = min_z;
-    }
-
-
-    // TODO!
-    //las_public_header_block(const std::vector<scan_point>& sp_vec);
-
-    // Default copy & assign.
-
-
-    std::size_t
-    size_on_disk() const 
-    { return static_cast<std::size_t>(header::size + sizeof(unsigned short)); }
-
-    thx::uint16 
-    pre_point_data() const { return pre_point_data_; }
-
-public:     // Wrapper.
-
-    const char*  
-    file_signature() const 
-    { return _hdr.file_signature; }
-
-    unsigned int       
-    reserved() const 
-    { return _hdr.reserved; }
-
-    unsigned int		  
-    guid_data_1() const 
-    { return _hdr.guid_data_1; }
-
-    thx::uint16		  guid_data_2()    const { return hdr_.guid_data_2;    }
-    thx::uint16		  guid_data_3()    const { return hdr_.guid_data_3;    }
-    const thx::uint8* guid_data_4()    const { return hdr_.guid_data_4;	   }
-    thx::uint8		  version_major()  const { return hdr_.version_major;  }
-    thx::uint8		  version_minor()  const { return hdr_.version_minor;  }
-    const thx::int8*  sys_identifier() const { return hdr_.sys_identifier; }
-    const thx::int8*  gen_software()   const { return hdr_.gen_software;   }
-    thx::uint16       year()		   const { return hdr_.year;		   }
-    thx::uint16       header_size()    const { return hdr_.header_size;    }
-    thx::uint32       offset_to_data() const { return hdr_.offset_to_data; }
-    thx::float64	  x_scale_factor() const { return hdr_.x_scale_factor; }
-    thx::float64	  y_scale_factor() const { return hdr_.y_scale_factor; }
-    thx::float64	  z_scale_factor() const { return hdr_.z_scale_factor; }
-    thx::float64	  x_offset()       const { return hdr_.x_offset;	   }
-    thx::float64	  y_offset()	   const { return hdr_.y_offset;	   }
-    thx::float64	  z_offset()	   const { return hdr_.z_offset;	   }
-    
-    double	  max_x()		   const { return hdr_.max_x;		   }
-    thx::float64	  min_x()		   const { return hdr_.min_x;		   }
-    thx::float64	  max_y()		   const { return hdr_.max_y;		   }
-    thx::float64	  min_y()		   const { return hdr_.min_y;		   }
-    thx::float64	  max_z()		   const { return hdr_.max_z;		   }
-    thx::float64	  min_z()		   const { return hdr_.min_z;		   }
-
-
-
-    unsigned short 
-    flight_date_julian() const 
-    { return _hdr.flight_date_julian; }
-    
-    unsigned int
-    num_variable_length_records() const 
-    { return _hdr.num_variable_length_records; }
-    
-    unsigned char 
-    point_data_format_id() const 
-    { return _hdr.point_data_format_id; }
-    
-    unsigned short 
-    point_data_record_length() const 
-    { return _hdr.point_data_record_length; }
-    
-    unsigned int 
-    num_point_records() const 
-    { return _hdr.num_point_records; }
-    
-    const unsigned int* 
-    num_points_by_return() const 
-    { return _hdr.num_points_by_return; }
-    
-private:	// Member variables.
-
-    _header _hdr;
-    unsigned short pre_point_data_;
-};
 
 //------------------------------------------------------------------------------
 
@@ -340,7 +309,9 @@ basic_ostream<CharT,Traits>&
 operator<<(basic_ostream<CharT,Traits>    &os, 
            const las::public_header_block &rhs)
 {
-    os	<< "las::public_header_block[0x" << &rhs << "]:\n"
+    os	<< "las::public_header_block[0x" << &rhs << "]\n"
+        << "sizeof(las::public_header_block)  : " 
+            << sizeof(las::public_header_block) << "\n"
         << "File Signature ('LASF')           : '" 
         << std::string(rhs.file_signature()) << "'\n"
         << "Reserved                          : " 
@@ -372,7 +343,7 @@ operator<<(basic_ostream<CharT,Traits>    &os,
         << "Header Size                       : " 
             << rhs.header_size() << " [bytes]\n"
         << "Offset to Data                    : " 
-            << rhs.offset_to_data() << " | " << rhs.size_on_disk() 
+            << rhs.offset_to_data() /*<< " | " << rhs.size_on_disk()*/ 
             << " [bytes]\n"
         << "Number of Variable Length Records : " 
             << rhs.num_variable_length_records() << "\n"
@@ -382,8 +353,10 @@ operator<<(basic_ostream<CharT,Traits>    &os,
             << rhs.point_data_record_length() << "\n"
         << "Number of Point Records           : " 
             << rhs.num_point_records() << "\n"
-        << "Number of Points by Return        :\n";
-    for (int i(0); i < las::public_header_block::num_points_by_return_length; ++i) {
+        << "Number of Points by Return\n";
+    for (int i(0); 
+         i < las::public_header_block::num_points_by_return_length; 
+         ++i) {
         os	<< "Return[" << i + 1 << "]                         : "
                 << rhs.num_points_by_return()[i] << "\n";
     }
@@ -401,34 +374,6 @@ operator<<(basic_ostream<CharT,Traits>    &os,
         << "Max Z                             : " << rhs.max_z() << "\n"
         << "Min Z                             : " << rhs.min_z() << "\n";
     
-    //const int vlr_size(static_cast<int>(rhs.vlr_vec().size()));
-    //for(int i = 0; i < vlr_size; ++i)
-    //{
-    //	os	<< "VLR[" << i << "]::Record Signature: " 
-    //			<< rhs.vlr_vec()[i].record_signature() 
-    //			<< std::hex << " | 0x" 
-    //			<< rhs.vlr_vec()[i].record_signature() << std::dec << "\n"
-    //		<< "VLR[" << i << "]::User ID: '" 
-    //			<< std::string(rhs.vlr_vec()[i].user_id()) << "'\n"
-    //		<< "VLR[" << i << "]::Record ID: " 
-    //			<< rhs.vlr_vec()[i].record_id() << "\n"
-    //		<< "VLR[" << i << "]::Record Length After Header: " 
-    //			<< rhs.vlr_vec()[i].record_length_after_header() << " | " 
-    //			<< rhs.vlr_vec()[i].size_on_disk() << " [bytes]\n"
-    //		<< "VLR[" << i << "]::Description: '" 
-    //			<< std::string(rhs.vlr_vec()[i].description()) << "'\n"
-    //		<< "VLR[" << i << "]::Data: '";
-    //	const int data_size(static_cast<int>(rhs.vlr_vec()[i].data().size()));
-    //	for(int j = 0; j < data_size; ++j)
-    //	{
-    //		os << rhs.vlr_vec()[i].data()[j]; 
-    //	}
-    //	os << "' [" << rhs.vlr_vec()[i].data().size() << " bytes]\n";
-    //}
-
-    os	<< "Pre-point value                   : " << rhs.pre_point_data() 
-            << std::hex << " | 0x" << rhs.pre_point_data() << std::dec << "\n";
-
     return os;
 }
 
@@ -437,6 +382,55 @@ operator<<(basic_ostream<CharT,Traits>    &os,
 #endif	// LAS_PUBLIC_HEADER_BLOCK_HPP_INCLUDED
 
 
+
+
+//const int vlr_size(static_cast<int>(rhs.vlr_vec().size()));
+//for(int i = 0; i < vlr_size; ++i)
+//{
+//	os	<< "VLR[" << i << "]::Record Signature: " 
+//			<< rhs.vlr_vec()[i].record_signature() 
+//			<< std::hex << " | 0x" 
+//			<< rhs.vlr_vec()[i].record_signature() << std::dec << "\n"
+//		<< "VLR[" << i << "]::User ID: '" 
+//			<< std::string(rhs.vlr_vec()[i].user_id()) << "'\n"
+//		<< "VLR[" << i << "]::Record ID: " 
+//			<< rhs.vlr_vec()[i].record_id() << "\n"
+//		<< "VLR[" << i << "]::Record Length After Header: " 
+//			<< rhs.vlr_vec()[i].record_length_after_header() << " | " 
+//			<< rhs.vlr_vec()[i].size_on_disk() << " [bytes]\n"
+//		<< "VLR[" << i << "]::Description: '" 
+//			<< std::string(rhs.vlr_vec()[i].description()) << "'\n"
+//		<< "VLR[" << i << "]::Data: '";
+//	const int data_size(static_cast<int>(rhs.vlr_vec()[i].data().size()));
+//	for(int j = 0; j < data_size; ++j)
+//	{
+//		os << rhs.vlr_vec()[i].data()[j]; 
+//	}
+//	os << "' [" << rhs.vlr_vec()[i].data().size() << " bytes]\n";
+//}
+
+//os	<< "Pre-point value                   : " << rhs.pre_point_data() 
+//        << std::hex << " | 0x" << rhs.pre_point_data() << std::dec << "\n";
+
+
+//static const unsigned short valid_pre_point_value = 52445;// 0xCCDD = 52445.
+
+
+
+// TODO!
+//las_public_header_block(const std::vector<scan_point>& sp_vec);
+
+// Default copy & assign.
+
+
+//std::size_t
+//size_on_disk() const 
+//{ return static_cast<std::size_t>(header::size + sizeof(unsigned short)); }
+
+//thx::uint16 
+//pre_point_data() const { return pre_point_data_; }
+
+//};
 
 
 
