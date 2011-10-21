@@ -23,23 +23,18 @@ class ifstream
 {
 public:
 
-    //! Empty CTOR.
+    //! Default CTOR.
     ifstream() 
-    {
-        _ifs.exceptions(std::ifstream::eofbit | 
-                        std::ifstream::failbit | 
-                        std::ifstream::badbit);
-    }
+    { _init(); }
 
     //! CTOR.
     explicit
-    ifstream(const std::string        &fname, 
+    ifstream(const std::string        &file_name, 
              const std::ios::openmode  mode = std::ios::in | std::ios::binary)
     {	
-        _ifs.exceptions(std::ifstream::eofbit | 
-                        std::ifstream::failbit | 
-                        std::ifstream::badbit);
-        open(fname, mode);
+        _init();
+        open(file_name, mode);
+
     }
 
     //! DTOR.
@@ -47,15 +42,17 @@ public:
     { close(); }
 
     void
-    open(const std::string        &fname, 
+    open(const std::string        &file_name, 
          const std::ios::openmode  mode = std::ios::in | std::ios::binary)
     {
         try {
-            _ifs.open(fname.c_str(), mode);
+            close();
+            _ifs.open(file_name.c_str(), mode);
+            _file_name = file_name;
             //_ifs.clear();
         }
         catch(const std::ofstream::failure&) {
-            LAS_THROW("las::ifstream: failure opening: '" << fname << "'");
+            LAS_THROW("las::ifstream: failure opening: '" << file_name << "'");
         }
     }
 
@@ -68,13 +65,30 @@ public:
     { 
         if (_ifs.is_open()) { 
             _ifs.close(); 
+            _file_name = std::string("");
         } 
     }
+
+    const std::string&
+    file_name() const
+    { return _file_name; }
+
 
     //! Expose std::ifstream for operators, etc.
     std::ifstream& 
     stream() 
     { return _ifs; }
+
+private:
+
+    static const std::ios_base::iostate default_exceptions = 
+        std::ofstream::eofbit | 
+        std::ofstream::failbit | 
+        std::ofstream::badbit;
+
+    void
+    _init()
+    { _ifs.exceptions(default_exceptions); }
 
 private:
 
@@ -84,6 +98,7 @@ private:
 private:    // Member variables.
 
     std::ifstream _ifs;
+    std::string   _file_name;
 };
 
 //------------------------------------------------------------------------------
@@ -100,7 +115,8 @@ operator<<(basic_ostream<CharT,Traits> &os,
            const las::ifstream         &rhs)
 {
     os	<< "las::ifstream[0x" << &rhs << "]\n"
-        << "Open : " << (rhs.is_open() ? "true" : "false") << "\n";
+        << "Open : " << (rhs.is_open() ? "true" : "false") << "\n"
+        << "File name : '" << rhs.file_name() << "'\n";
     return os;
 }
 

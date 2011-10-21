@@ -15,18 +15,23 @@ main(int argc, char* argv[])
 {
     using std::cerr;
 
-    las::ifstream ifs;
-    cerr << ifs << "\n";
+    try {
+        las::ifstream ifs("D:/las.git/test/data/test.las");
+        cerr << ifs << "\n";
 
-    las::ofstream ofs;
-    cerr << ofs << "\n";
+        las::header header;
+        header.read(ifs);
+        cerr << header << "\n";
 
 
-    las::public_header_block phb;
-    cerr << phb << "\n";
+        las::ofstream ofs;
+        cerr << ofs << "\n";
 
-    las::variable_length_record vlr;
-    cerr << vlr << "\n";
+    }
+    catch (std::exception& ex) {
+        cerr << ex.what() << "\n";
+        std::abort();
+    }
 
     return 0;
 }

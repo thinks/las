@@ -11,6 +11,7 @@
 #include "las_types.hpp"
 #include "las_exception.hpp"
 #include "las_static_assert.hpp"
+#include "las_ifstream.hpp"
 #include <cstring>
 #include <algorithm>
 #include <iosfwd>
@@ -253,6 +254,15 @@ public:
     const uint32* 
     num_points_by_return() const 
     { return _num_points_by_return; }
+
+public: 
+
+    void
+    read(ifstream &ifs)
+    { 
+        ifs.stream().read(reinterpret_cast<char*>(this), 
+                          sizeof(public_header_block)); 
+    }
 
 private:    // Member variables.
 

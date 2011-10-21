@@ -23,24 +23,18 @@ class ofstream
 {
 public:
 
-    //! CTOR.
+    //! Default CTOR.
     ofstream()
-    {
-        _ofs.exceptions(std::ofstream::eofbit | 
-                        std::ofstream::failbit | 
-                        std::ofstream::badbit);
-    }
+    { _init(); }
 
     //! CTOR.
     explicit
-    ofstream(const std::string        &fname, 
+    ofstream(const std::string        &file_name, 
              const std::ios::openmode  mode = std::ios::out | std::ios::binary)
     {
-        _ofs.exceptions(std::ofstream::eofbit | 
-                        std::ofstream::failbit | 
-                        std::ofstream::badbit);
-
-        open(fname, mode);
+        _init();
+        open(file_name, mode);
+        _file_name = file_name;
     }
 
     //! DTOR.
@@ -48,15 +42,17 @@ public:
     { close(); }
 
     void
-    open(const std::string  &fname, 
-         std::ios::openmode  mode = std::ios::out | std::ios::binary)
+    open(const std::string  &file_name, 
+         const std::ios::openmode  mode = std::ios::out | std::ios::binary)
     {
         try {
-            _ofs.open(fname.c_str(), mode);
+            close();
+            _ofs.open(file_name.c_str(), mode);
+            _file_name = file_name;
             //ofs_.clear();
         }
         catch(const std::ofstream::failure&) {
-            LAS_THROW("las::ofstream: failure opening: '" << fname << "'");
+            LAS_THROW("las::ofstream: failure opening: '" << file_name << "'");
         }
     }
 
@@ -69,12 +65,28 @@ public:
     { 
         if (is_open()) {
             _ofs.close(); 
+            _file_name = std::string("");
         }
     }
+
+    const std::string&
+    file_name() const
+    { return _file_name; }
 
     std::ofstream& 
     stream() 
     { return _ofs; }
+
+private:
+
+    static const std::ios_base::iostate default_exceptions = 
+        std::ofstream::eofbit | 
+        std::ofstream::failbit | 
+        std::ofstream::badbit;
+
+    void
+    _init()
+    { _ofs.exceptions(default_exceptions); }
 
 private:
 
@@ -84,6 +96,7 @@ private:
 private:    // Member variables.
 
     std::ofstream _ofs;
+    std::string   _file_name;
 };
 
 //------------------------------------------------------------------------------
@@ -100,7 +113,8 @@ operator<<(basic_ostream<CharT,Traits> &os,
            const las::ofstream         &rhs)
 {
     os	<< "las::ofstream[0x" << &rhs << "]\n"
-        << "Open : " << (rhs.is_open() ? "true" : "false") << "\n";
+        << "Open      : " << (rhs.is_open() ? "true" : "false") << "\n"
+        << "File name : '" << rhs.file_name() << "'\n";
     return os;
 }
 
