@@ -10,7 +10,8 @@
 
 //#include "salsa_exception.hpp"
 //#include "salsa_las_public_header_block.hpp"
-
+#include "las_types.hpp"
+#include "las_exception.hpp"
 #include <limits>
 #include <exception>
 #include <fstream>
@@ -22,10 +23,8 @@ namespace las {
 
 //------------------------------------------------------------------------------
 
-#ifdef WIN32 
 #pragma pack(push)
 #pragma pack(1)     // 1 byte alignment.		
-#endif  // WIN32
 
 //------------------------------------------------------------------------------
 
@@ -37,7 +36,7 @@ class point_data_record_format0
 {
 public:
 
-    static const int size = 20;		//! [bytes]
+    static const std::size_t size = 20;		//! [bytes]
 
     //! CTOR.
     explicit
@@ -82,81 +81,70 @@ public:
     
     // Default copy & assign.
 
-    int  
-    x() const 
-    { return _x; }
+    int32 x() const { return _x; }
+    int32 y() const { return _y; }
+    int32 z() const { return _z; }
 
-    int  
-    y() const 
-    { return _y; }
-
-    int
-    z() const 
-    { return _z; }
-
-    unsigned short 
+    uint16
     intensity() const 
     { return _intensity; }
 
-    unsigned char  
+    uint8  
     classification() const 
     { return _classification; }
 
-    char   
+    int8   
     scan_angle_rank() const	
     { return _scan_angle_rank; }
 
-    unsigned char  
+    uint8  
     file_marker() const	
     { return _file_marker; }
 
-    unsigned short
+    uint16
     user_bit_field() const 
     { return _user_bit_field;  }
 
 public:     // Bit buffer.
 
-    unsigned char 
+    uint8 
     return_num() const 
     { return _buf_return_num(_bit_buffer); }
 
-    unsigned char  
+    uint8  
     num_returns() const
     { return _buf_num_returns(_bit_buffer); }
 
-    char
+    int8
     scan_direction_flag() const
     { return _buf_scan_dir_flag(_bit_buffer); }
 
-    thx::uint8  
+    uint8  
     edge_of_flight_line() const
     { return _buf_edge_flag(_bit_buffer); }
 
-private:
-
-    point_data_record_format0();	//! Empty CTOR - disabled.
-
 private:    // Constants.
     
-    static const unsigned char _min_num_returns = 1;
     static const unsigned char _min_return_num  = 1;
     static const unsigned char _max_scan_dir    = 1;
     static const unsigned char _max_edge_flag   = 1;
 
 private:    // Helper functions.
     
-    static unsigned char 
-    _valid_num_returns(const unsigned char nr)
+    static uint8 
+    _valid_num_returns(const uint8 nr)
     {
-        if( nr < _min_num_returns ||
-            nr > public_header_block::num_points_by_return_length ) {	
+        static const uint8 min_num_returns = 1;
+
+        if (nr < min_num_returns ||
+            nr > public_header_block::num_points_by_return_length) {	
             LAS_THROW(
                 "las::PDRF0: invalid num_returns: " 
-                    << static_cast<int>(nr) << " [min: "
-                    << static_cast<int>(min_num_returns)
+                    << static_cast<int32>(nr) << " [min: "
+                    << static_cast<int32>(min_num_returns)
                     << ", max:"
-                    << static_cast<int>(
-                        las_public_header_block::num_points_by_return_length)
+                    << static_cast<int32>(
+                        public_header_block::num_points_by_return_length)
                     << "]");
         }
 
@@ -243,15 +231,15 @@ private:    // Helper functions.
 
 private:	// Member variables.
 
-    int            _x;					// 4 bytes, required.
-    int            _y;					// 4 bytes, required.
-    int            _z;					// 4 bytes, required.
-    unsigned short _intensity;			// 2 bytes.
-    char           _bit_buffer;			// 1 byte.
-    unsigned char  _classification;		// 1 byte.
-    char           _scan_angle_rank;	// 1 byte, required.
-    unsigned char  _file_marker;		// 1 byte.
-    unsigned short _user_bit_field;		// 2 bytes.
+    int32  _x;					// 4 bytes, required.
+    int32  _y;					// 4 bytes, required.
+    int32  _z;					// 4 bytes, required.
+    uint16 _intensity;			// 2 bytes.
+    int8   _bit_buffer;			// 1 byte.
+    uint8  _classification;		// 1 byte.
+    int8   _scan_angle_rank;	// 1 byte, required.
+    uint8  _file_marker;		// 1 byte.
+    uint16 _user_bit_field;		// 2 bytes.
 };
 
 //------------------------------------------------------------------------------

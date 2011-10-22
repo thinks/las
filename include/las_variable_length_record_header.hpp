@@ -52,14 +52,34 @@ public:
     }
 
     //! Copy CTOR.
-    variable_length_record_header(const variable_length_record_header &rhs) 
-    { *this = rhs; }
+    variable_length_record_header(const variable_length_record_header &rhs)
+        : _record_signature(rhs._record_signature)
+        , _record_id(rhs._record_id)
+        , _record_length_after_header(rhs._record_length_after_header)
+    { 
+        std::memcpy(_user_id, 
+                    rhs._user_id, 
+                    user_id_length*sizeof(int8));
+        std::memcpy(_description, 
+                    rhs._description, 
+                    description_length*sizeof(int8));
+    }
 
     //! Assign.
     variable_length_record_header& 
     operator=(const variable_length_record_header &rhs)
     {
-        std::memcpy(this, &rhs, size); // Bit-wise copy.
+        _record_signature = rhs._record_signature;
+        _record_id = rhs._record_id;
+        _record_length_after_header = rhs._record_length_after_header;
+        std::memcpy(_user_id, 
+                    rhs._user_id, 
+                    user_id_length*sizeof(int8));
+        _user_id[user_id_length - 1] = '\0';  // Null termination.
+        std::memcpy(_description, 
+                    rhs._description, 
+                    description_length*sizeof(int8));
+        _description[description_length - 1] = '\0'; // Null termination.
         return *this;
     }
 

@@ -16,6 +16,7 @@ namespace las {
     typedef unsigned short uint16;
     typedef long           int32;
     typedef unsigned long  uint32;
+    typedef float          float32;
     typedef double         float64;
 
 }   // Namespace: las.

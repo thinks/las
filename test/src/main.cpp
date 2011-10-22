@@ -19,6 +19,12 @@ main(int argc, char* argv[])
         las::ifstream ifs("D:/las.git/test/data/test.las");
         cerr << ifs << "\n";
 
+        las::public_header_block phb;
+        std::vector<las::point> points;
+        las::io::read("D:/las.git/test/data/test.las",
+                      phb,
+                      points);
+
         las::header header;
         header.read(ifs);
         cerr << header << "\n";
