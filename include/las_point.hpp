@@ -14,6 +14,7 @@
 #include "las_point_data_record_format.hpp"
 #include <limits>
 #include <iostream>
+#include <iomanip>
 
 //------------------------------------------------------------------------------
 
@@ -25,89 +26,45 @@ class point
 {
 public:
 
-    //! Default CTOR.
-    point()
-        : pos_				  (default_pos),
-        , _gps_time_			  (default_gps_time),
-        , _intensity_		  (default_intensity),
-        , _num_returns_		  (default_num_returns),				
-        , _return_num_		  (default_return_num),
-        , _scan_direction_flag_(default_scan_direction_flag),
-        , _edge_flag_		  (default_edge_flag),
-        , _scan_angle_rank_	  (default_scan_angle_rank),
-        , _classification_	  (default_classification),
-        , _red_				  (default_red), 
-        , _green_			  (default_green), 
-        , _blue(default_blue)
-    {}
-
-    //! CTOR.
+    //! PDRF0 CTOR.
     explicit
     point(const public_header_block       &phb,
           const point_data_record_format0 &pdrf0)
+        : _x(_coord_float32(phb.x_scale_factor(), pdrf0.x(), phb.x_offset()))
+        , _y(_coord_float32(phb.y_scale_factor(), pdrf0.y(), phb.y_offset()))
+        , _z(_coord_float32(phb.z_scale_factor(), pdrf0.z(), phb.z_offset()))
+        , _r(0)
+        , _g(0) 
+        , _b(0)
+        , _gps_time(_valid_gps_time(0.))
+        , _intensity(pdrf0.intensity())
+        , _num_returns(_valid_num_returns(pdrf0.num_returns()))
+        , _return_num(_valid_return_num(pdrf0.return_num(),pdrf0.num_returns()))
+        , _scan_direction_flag(_valid_scan_dir(pdrf0.scan_direction_flag()))
+        , _edge_flag(_valid_edge_flag(pdrf0.edge_flag()))
+        , _scan_angle_rank(pdrf0.scan_angle_rank())
+        , _classification(pdrf0.classification())
     {}
 
-    //! CTOR.
+    //! PDRF1 CTOR.
     explicit
     point(const public_header_block       &phb,
           const point_data_record_format1 &pdrf1)
-        : _x(phb.x_scale_factor*pdrf1.x_pos + x_offset)
-        , _y(y_scale*y_pos + y_offset)
-        , _z(z_scale*z_pos + z_offset)
-        , _r(0), 
-        , _g(0), 
+        : _x(_coord_float32(phb.x_scale_factor(), pdrf1.x(), phb.x_offset()))
+        , _y(_coord_float32(phb.y_scale_factor(), pdrf1.y(), phb.y_offset()))
+        , _z(_coord_float32(phb.z_scale_factor(), pdrf1.z(), phb.z_offset()))
+        , _r(0)
+        , _g(0) 
         , _b(0)
- 
-        ,
-          gps_time_			  (valid_gps_time(gps_time)),
-          intensity_		  (i),
-          num_returns_		  (valid_num_returns(num_returns)),				
-          return_num_		  (valid_return_num(return_num, num_returns_)),
-          scan_direction_flag_(valid_scan_dir(scan_direction_flag)),
-          edge_flag_		  (valid_edge_flag(edge_flag)),
-          scan_angle_rank_	  (scan_angle_rank),
-          classification_	  (classification),
+        , _gps_time(_valid_gps_time(pdrf1.gps_time()))
+        , _intensity(pdrf1.intensity())
+        , _num_returns(_valid_num_returns(pdrf1.num_returns()))
+        , _return_num(_valid_return_num(pdrf1.return_num(),pdrf1.num_returns()))
+        , _scan_direction_flag(_valid_scan_dir(pdrf1.scan_direction_flag()))
+        , _edge_flag(_valid_edge_flag(pdrf1.edge_flag()))
+        , _scan_angle_rank(pdrf1.scan_angle_rank())
+        , _classification(pdrf1.classification())
     {}
-
-
-    //! CTOR.
-    explicit
-    scan_point(const float64 x_scale,
-               const float64 y_scale,
-               const float64 z_scale,
-               const float64 x_offset,
-               const float64 y_offset,
-               const float64 z_offset,
-               const int32   x_pos,
-               const int32   y_pos,
-               const int32   z_pos,
-               const float64 gps_time,
-               const uint16	 intensity,
-               const uint8	 num_returns,
-               const uint8	 return_num,
-               const uint8	 scan_direction_flag,
-               const uint8	 edge_flag,
-               const int8	 scan_angle_rank,
-               const uint8	 classification)
-        : _x(x_scale*x_pos + x_offset)
-        , _y(y_scale*y_pos + y_offset)
-        , _z(z_scale*z_pos + z_offset)
-        , _r(0), 
-        , _g(0), 
-        , _b(0)
- 
-        ,
-          gps_time_			  (valid_gps_time(gps_time)),
-          intensity_		  (i),
-          num_returns_		  (valid_num_returns(num_returns)),				
-          return_num_		  (valid_return_num(return_num, num_returns_)),
-          scan_direction_flag_(valid_scan_dir(scan_direction_flag)),
-          edge_flag_		  (valid_edge_flag(edge_flag)),
-          scan_angle_rank_	  (scan_angle_rank),
-          classification_	  (classification),
-    {}
-
-    // Default copy & assign.
 
 public:
 
@@ -151,49 +108,18 @@ public:
     classification() const 
     { return _classification; }
 
-public:
-
-    int32   
-    gps_time_int() const 
-    { return std::floor(_gps_time); }
-
-    //double 
-    //gps_time_frac() const 
-    //{ return thx::frac(_gps_time); }
-
-private:
-
-    // Default values.
-    //
-    static const thx::vec<3,S> default_pos;
-    static const thx::float64  default_gps_time;
-    static const thx::uint16   default_intensity;
-    static const thx::uint8    default_num_returns;
-    static const thx::uint8    default_return_num;	
-    static const thx::uint8    default_scan_direction_flag;
-    static const thx::uint8    default_edge_flag;			
-    static const thx::int8     default_scan_angle_rank;	
-    static const thx::uint8    default_classification;		
-    static const thx::uint8    default_red;				
-    static const thx::uint8    default_green;				
-    static const thx::uint8    default_blue;	
-
-    // Bounds.
-    //
-
-private:    // Validation functions.
+private:    // Validation.
 
     static float64
     _valid_gps_time(const float64 t)
     {
-        static const float64 min_gps_time(0.0);
-        static const float64 max_gps_time(
-            static_cast<float64>((std::numeric_limits<int32>::max)());
+        static const float64 min_gps_time(0.);
+        static const float64 max_gps_time((std::numeric_limits<int32>::max)());
 
-        if (t > _max_gps_time || t < _min_gps_time) {
+        if (t > max_gps_time || t < min_gps_time) {
             LAS_THROW(
-                "las::point: invalid gps_time: " << t << " [min: " 
-                    << min_gps_time << ", max: " << max_gps_time << "]");
+                "las::point: invalid GPS time: " << t << 
+                " [min: " << min_gps_time << ", max: " << max_gps_time << "]");
         }
 
         return t;
@@ -207,8 +133,8 @@ private:    // Validation functions.
         if (nr < min_num_returns) {	
             LAS_THROW(
                 "las::point: invalid number of returns: " 
-                    << static_cast<int32>(nr) << " [min: "
-                    << static_cast<int32>(min_num_returns) << "]");
+                    << static_cast<int>(nr) << " [min: "
+                    << static_cast<int>(min_num_returns) << "]");
         }
 
         return nr;
@@ -222,9 +148,9 @@ private:    // Validation functions.
         if (rn < min_return_num || rn > nr) {	
             LAS_THROW(
                 "las::point: invalid return number: " 
-                    << static_cast<int32>(rn) << " [min: " 
-                    << static_cast<int32>(min_return_num) 
-                    << ", max: " << static_cast<int32>(nr) << "]");
+                    << static_cast<int>(rn) << " [min: " 
+                    << static_cast<int>(min_return_num) 
+                    << ", max: " << static_cast<int>(nr) << "]");
         }
 
         return rn;
@@ -238,8 +164,8 @@ private:    // Validation functions.
         if (scan_dir > max_scan_dir) {	
             LAS_THROW(
                 "las::point: invalid scan direction: " 
-                    << static_cast<int32>(scan_dir) << " [max: "
-                    << static_cast<int32>(max_scan_dir) << "]");
+                    << static_cast<int>(scan_dir) << " [max: "
+                    << static_cast<int>(max_scan_dir) << "]");
         }
 
         return scan_dir;
@@ -253,21 +179,25 @@ private:    // Validation functions.
         if (edge > max_edge_flag) {	
             LAS_THROW(
                 "las::point: invalid edge_flag: " 
-                    << static_cast<int32>(edge) << " [max: "
-                    << static_cast<int32>(max_edge_flag) << "]");	
+                    << static_cast<int>(edge) << " [max: "
+                    << static_cast<int>(max_edge_flag) << "]");	
         }
 
         return edge;
     }
 
+private:    // Position.
+
+    static float32
+    _coord_float32(const float64 scale,
+                   const int32   pos,
+                   const float64 offset)
+    { return static_cast<float32>(scale*pos + offset); }
+
 private:	// Member variables.
 
-    float32 _x;                     // 4 bytes.
-    float32 _y;                     // 4 bytes.
-    float32 _z;                     // 4 bytes.
-    uint8   _r;				        // 1 byte.
-    uint8   _g;				        // 1 byte.
-    uint8   _b;				        // 1 byte.
+    float32 _x, _y, _z;             // 12 bytes.
+    uint8   _r, _g, _b; 	        // 3 byte.
     float64 _gps_time;			    // 8 bytes, [LAS].
     uint16  _intensity;			    // 2 bytes, [LAS].
     uint8   _num_returns;		    // 1 byte,  [LAS].
@@ -277,26 +207,6 @@ private:	// Member variables.
     int8    _scan_angle_rank;	    // 1 byte,  [LAS].
     uint8   _classification;		// 1 byte,  [LAS].
 };
-
-//------------------------------------------------------------------------------
-
-// Default values, all valid.
-//
-template<typename S> 
-const thx::vec<3,S> scan_point<S>::default_pos(thx::vec<3,S>::origin);
-template<typename S> const thx::float64  scan_point<S>::default_gps_time(0.0);
-template<typename S> const thx::uint16   scan_point<S>::default_intensity(0);
-template<typename S> const thx::uint8    scan_point<S>::default_num_returns(1);
-template<typename S> const thx::uint8    scan_point<S>::default_return_num(1);	
-template<typename S> 
-const thx::uint8 scan_point<S>::default_scan_direction_flag(0);
-template<typename S> const thx::uint8 scan_point<S>::default_edge_flag(0);			
-template<typename S> const thx::int8  scan_point<S>::default_scan_angle_rank(0);	
-template<typename S> const thx::uint8 scan_point<S>::default_classification(0);		
-template<typename S> const thx::uint8 scan_point<S>::default_red(0);				
-template<typename S> const thx::uint8 scan_point<S>::default_green(0);				
-template<typename S> const thx::uint8 scan_point<S>::default_blue(0);
-
 
 }	// Namespace: las.
 
@@ -310,28 +220,28 @@ basic_ostream<CharT,Traits>&
 operator<<(basic_ostream<CharT,Traits> &os,
            const las::point            &rhs)
 {
-    os	<< std::fixed << std::setprecision(3)
+    os	<< fixed << setprecision(3)
         << "las::point[0x" << &rhs << "]:\n"
-        << "sizeof(las::point)    : " << sizeof(las::point) << " [bytes]\n";
-        << "X                     : " << rhs.x() << "\n";
-        << "Y                     : " << rhs.y() << "\n";
-        << "Z                     : " << rhs.z() << "\n";
-        << "GPS Time <double>     : " << rhs.gps_time()  
-            << " | <int>: "           << rhs.gps_time_int()	  << "\n"
-        << "Intensity             : " << rhs.intensity() << "\n"
+        << "sizeof(las::point)    : " << sizeof(las::point) << " [bytes]\n"
+        << "[X,Y,Z]               : [" 
+            << rhs.x() << ", " << rhs.y() << ", " << rhs.z() << "]\n"
+        << "[R,G,B,I]             : [" 
+            << static_cast<int>(rhs.r()) << ", " 
+            << static_cast<int>(rhs.g()) << ", " 
+            << static_cast<int>(rhs.b()) << ", "
+            << rhs.intensity() << "]\n"
+        << "GPS Time              : " << rhs.gps_time() << "\n"  
         << "Return Number         : " 
             << static_cast<int>(rhs.return_num()) 
             << " | " << static_cast<int>(rhs.num_returns()) << "\n"
         << "Edge Flag             : " 
-            << static_cast<int>(rhs.edge_flag())	<< "\n"
+            << static_cast<int>(rhs.edge_flag()) << "\n"
         << "Scan Direction Flag   : " 
             << static_cast<int>(rhs.scan_direction_flag()) << "\n"
         << "Scan Angle Rank       : " 
-            << static_cast<int>(rhs.scan_angle_rank())	<<"\n"
+            << static_cast<int>(rhs.scan_angle_rank()) <<"\n"
         << "Classification        : " 
-            << static_cast<int>(rhs.classification())	<< "\n"
-        << "RGB                   : " 
-            << "(" << rhs.r() << ", " << rhs.g() << ", " << rhs.b() << "\n"
+            << static_cast<int>(rhs.classification()) << "\n";
     return os;
 }
 

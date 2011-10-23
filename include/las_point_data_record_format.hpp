@@ -8,10 +8,10 @@
 #ifndef LAS_POINT_DATA_RECORD_FORMAT_HPP_INCLUDED
 #define LAS_POINT_DATA_RECORD_FORMAT_HPP_INCLUDED
 
-//#include "salsa_exception.hpp"
-//#include "salsa_las_public_header_block.hpp"
 #include "las_types.hpp"
 #include "las_exception.hpp"
+#include "las_public_header_block.hpp"
+#include <cmath>
 #include <limits>
 #include <exception>
 #include <fstream>
@@ -40,32 +40,32 @@ public:
 
     //! CTOR.
     explicit
-    point_data_record_format0(const double         scale_x,
-                              const double         scale_y,
-                              const double         scale_z,
-                              const double         offset_x,
-                              const double         offset_y,
-                              const double         offset_z,
-                              const double         pos_x,
-                              const double         pos_y,
-                              const double         pos_z,
-                              const unsigned short intensity,
-                              const unsigned char  num_returns,
-                              const unsigned char  return_num,
-                              const unsigned char  scan_direction_flag,
-                              const unsigned char  edge_flag,
-                              const char	       scan_angle_rank,
-                              const unsigned char  classification,
-                              const unsigned char  file_marker,	
-                              const unsigned short user_bit_field)
-        : _x(_compute_coord(pos_x, offset_x, scale_x))
-        , _y(_compute_coord(pos_y, offset_y, scale_y))
-        , _z(_compute_coord(pos_z, offset_z, scale_z))
-        , _intensity(i)
-        , _bit_buffer(_compute_bit_buffer(return_num,
-                                          num_returns,
-                                          scan_direction_flag,
-                                          edge_flag))
+    point_data_record_format0(const float64 inv_scale_x,
+                              const float64 inv_scale_y,
+                              const float64 inv_scale_z,
+                              const float64 offset_x,
+                              const float64 offset_y,
+                              const float64 offset_z,
+                              const float64 pos_x,
+                              const float64 pos_y,
+                              const float64 pos_z,
+                              const uint16  intensity,
+                              const uint8   num_returns,
+                              const uint8   return_num,
+                              const uint8   scan_direction_flag,
+                              const uint8   edge_flag,
+                              const int8	scan_angle_rank,
+                              const uint8   classification,
+                              const uint8   file_marker,	
+                              const uint16  user_bit_field)
+        : _x(_coord_int32(pos_x, offset_x, inv_scale_x))
+        , _y(_coord_int32(pos_y, offset_y, inv_scale_y))
+        , _z(_coord_int32(pos_z, offset_z, inv_scale_z))
+        , _intensity(intensity)
+        , _bit_buffer(_create_bit_buffer(return_num,
+                                         num_returns,
+                                         scan_direction_flag,
+                                         edge_flag))
         , _classification(classification)
         , _scan_angle_rank(scan_angle_rank)
         , _file_marker(file_marker)
@@ -75,11 +75,18 @@ public:
     //! DTOR.
     ~point_data_record_format0()
     {
-        //SALSA_STATIC_ASSERT(
-        //    size == sizeof(las_point_data_record_format0), invalid_size);
+        LAS_STATIC_ASSERT(1 == sizeof(int8),    invalid_int8_size);
+        LAS_STATIC_ASSERT(1 == sizeof(uint8),   invalid_uint8_size);
+        LAS_STATIC_ASSERT(2 == sizeof(int16),   invalid_int16_size);
+        LAS_STATIC_ASSERT(2 == sizeof(uint16),  invalid_uint16_size);
+        LAS_STATIC_ASSERT(4 == sizeof(int32),   invalid_int32_size);
+        LAS_STATIC_ASSERT(4 == sizeof(uint32),  invalid_uint32_size);
+        LAS_STATIC_ASSERT(8 == sizeof(float64), invalid_float64_size);
+        LAS_STATIC_ASSERT(size == sizeof(point_data_record_format0), 
+                          invalid_pdrf0_size); 
     }
     
-    // Default copy & assign.
+public:
 
     int32 x() const { return _x; }
     int32 y() const { return _y; }
@@ -120,16 +127,10 @@ public:     // Bit buffer.
     { return _buf_scan_dir_flag(_bit_buffer); }
 
     uint8  
-    edge_of_flight_line() const
+    edge_flag() const
     { return _buf_edge_flag(_bit_buffer); }
 
-private:    // Constants.
-    
-    static const unsigned char _min_return_num  = 1;
-    static const unsigned char _max_scan_dir    = 1;
-    static const unsigned char _max_edge_flag   = 1;
-
-private:    // Helper functions.
+private:    // Validation.
     
     static uint8 
     _valid_num_returns(const uint8 nr)
@@ -139,7 +140,7 @@ private:    // Helper functions.
         if (nr < min_num_returns ||
             nr > public_header_block::num_points_by_return_length) {	
             LAS_THROW(
-                "las::PDRF0: invalid num_returns: " 
+                "las::PDRF0: invalid number of returns: " 
                     << static_cast<int32>(nr) << " [min: "
                     << static_cast<int32>(min_num_returns)
                     << ", max:"
@@ -151,82 +152,92 @@ private:    // Helper functions.
         return nr;
     }
 
-    static unsigned char 
-    _valid_return_num(const unsigned char rn, const unsigned char nr)
+    static uint8 
+    _valid_return_num(const uint8 rn, const uint8 nr)
     {
-        if( rn < _min_return_num || rn > nr ) {	
+        static const uint8 min_return_num = 1;
+
+        if (rn < min_return_num || rn > nr) {	
             LAS_THROW(
-                "las::PDRF0: invalid return_num: " 
-                    << static_cast<int>(rn) << " [min:" 
-                    << static_cast<int>(min_return_num) 
-                    << ", max:" << static_cast<int>(nr) << "]");
+                "las::PDRF0: invalid return number: " 
+                    << static_cast<int32>(rn) << " [min:" 
+                    << static_cast<int32>(min_return_num) 
+                    << ", max:" << static_cast<int32>(nr) << "]");
         }
 
         return rn;
     }
 
-    static unsigned char 
-    _valid_scan_dir(const unsigned char scan_dir)
+    static uint8 
+    _valid_scan_dir(const uint8 scan_dir)
     {
-        if( scan_dir > max_scan_dir ) {	
-            SALSA_THROW(
-                "las::PDRF0: invalid scan_dir: " 
-                    << static_cast<int64>(scan_dir) << " [max: "
-                    << static_cast<int64>(max_scan_dir) << "]");
+        static const uint8 max_scan_dir = 1;
+
+        if (scan_dir > max_scan_dir) {	
+            LAS_THROW(
+                "las::PDRF0: invalid scan direction: " 
+                    << static_cast<int32>(scan_dir) << " [max: "
+                    << static_cast<int32>(max_scan_dir) << "]");
         }
 
         return scan_dir;
     }
 
-    static unsigned char 
-    _valid_edge_flag(const unsigned char edge)
+    static uint8 
+    _valid_edge_flag(const uint8 edge_flag)
     {
-        if (edge > max_edge_flag) {	
-            SALSA_THROW(
-                "las::PDRF0: invalid edge_flag: " 
-                    << static_cast<int>(edge) << " [max: "
-                    << static_cast<int>(max_edge_flag) << "]");	
+        static const uint8 max_edge_flag = 1;
+
+        if (edge_flag > max_edge_flag) {	
+            LAS_THROW(
+                "las::PDRF0: invalid edge flag: " 
+                    << static_cast<int32>(edge_flag) << " [max: "
+                    << static_cast<int32>(max_edge_flag) << "]");	
         }
 
-        return edge;
+        return edge_flag;
     }
     
-    //! Simple rounding.
-    static int
-    _compute_coord(const double pos, 
-                   const double offset, 
-                   const double scale)
-    { return std::floor((pos - offset)/scale + 0.5); }
+private:    // Position.
 
-    static char
-    _compute_bit_buffer(const unsigned char return_num,
-                        const unsigned char num_returns,
-                        const unsigned char scan_dir,
-                        const unsigned char edge_flag)
+    //! Simple rounding.
+    static int32
+    _coord_int32(const float64 pos, 
+                 const float64 offset, 
+                 const float64 inv_scale)
+    { return static_cast<int32>(std::floor((pos - offset)*inv_scale + 0.5)); }
+
+private:    // Bit buffer.
+
+    static int8
+    _create_bit_buffer(const uint8 return_num,
+                       const uint8 num_returns,
+                       const uint8 scan_dir,
+                       const uint8 edge_flag)
     { 
-        const unsigned char vnum_returns(valid_num_returns(num_returns));
-        char buf(0);
+        const uint8 vnum_returns(_valid_num_returns(num_returns));
+        int8 buf(0);
         buf += (vnum_returns							    << 5);
-        buf += (valid_return_num(return_num, vnum_returns)	<< 2);
-        buf += (valid_scan_dir(scan_dir)					<< 1);
-        buf += (valid_edge_flag(edge_flag)						);
+        buf += (_valid_return_num(return_num, vnum_returns)	<< 2);
+        buf += (_valid_scan_dir(scan_dir)					<< 1);
+        buf += (_valid_edge_flag(edge_flag)						);
         return buf;
     }
 
-    static unsigned char 
-    _buf_return_num(const char buf) 
+    static uint8
+    _buf_return_num(const int8 buf) 
     { return ((buf & 224) >> 5); }
 
-    static unsigned char 
-    _buf_num_returns(const char buf)
+    static uint8 
+    _buf_num_returns(const int8 buf)
     { return ((buf & 28)  >> 2); }
 
-    static unsigned char 
-    _buf_scan_dir_flag(const char buf)
+    static uint8 
+    _buf_scan_dir_flag(const int8 buf)
     { return ((buf & 2) >> 1); }
 
-    static unsigned char
-    _buf_edge_flag(const char buf)
+    static uint8
+    _buf_edge_flag(const int8 buf)
     { return  (buf & 1); }
 
 private:	// Member variables.
@@ -252,238 +263,252 @@ class point_data_record_format1
 {
 public:
 
-    static const thx::int64 size = 28;		// [bytes]
+    static const std::size_t size = 28;		// [bytes]
 
     //! CTOR.
     explicit
-    point_data_record_format1(const double         scale_x,
-                              const double         scale_y,
-                              const double         scale_z,
-                              const double         offset_x,
-                              const double         offset_y,
-                              const double         offset_z,
-                              const double         pos_x,
-                              const double         pos_y,
-                              const double         pos_z,
-                              const unsigned short intensity,
-                              const unsigned char  num_returns,
-                              const unsigned char  return_num,
-                              const unsigned char  scan_direction_flag,
-                              const unsigned char  edge_flag,
-                              const char	       scan_angle_rank,
-                              const unsigned char  classification,
-                              const unsigned char  file_marker,	
-                              const unsigned short user_bit_field,
-                              const double         gps_time)
-        : _x(_compute_coord(pos_x, offset_x, scale_x))
-        , _y(_compute_coord(pos_y, offset_y, scale_y))
-        , _z(_compute_coord(pos_z, offset_z, scale_z))
-        , _intensity(i)
-        , _bit_buffer(_compute_bit_buffer(return_num,
-                                          num_returns,
-                                          scan_direction_flag,
-                                          edge_flag))
+    point_data_record_format1(const float64 inv_scale_x,
+                              const float64 inv_scale_y,
+                              const float64 inv_scale_z,
+                              const float64 offset_x,
+                              const float64 offset_y,
+                              const float64 offset_z,
+                              const float64 pos_x,
+                              const float64 pos_y,
+                              const float64 pos_z,
+                              const uint16  intensity,
+                              const uint8   num_returns,
+                              const uint8   return_num,
+                              const uint8   scan_direction_flag,
+                              const uint8   edge_flag,
+                              const int8	scan_angle_rank,
+                              const uint8   classification,
+                              const uint8   file_marker,	
+                              const uint16  user_bit_field,
+                              const float64 gps_time)
+        : _x(_coord_int32(pos_x, offset_x, inv_scale_x))
+        , _y(_coord_int32(pos_y, offset_y, inv_scale_y))
+        , _z(_coord_int32(pos_z, offset_z, inv_scale_z))
+        , _intensity(intensity)
+        , _bit_buffer(_create_bit_buffer(return_num,
+                                         num_returns,
+                                         scan_direction_flag,
+                                         edge_flag))
         , _classification(classification)
         , _scan_angle_rank(scan_angle_rank)
         , _file_marker(file_marker)
         , _user_bit_field(user_bit_field)
-        , _valid_gps_time(gps_time)
+        , _gps_time(_valid_gps_time(gps_time))
     {}
-
 
     //! DTOR.
     ~point_data_record_format1()
     {
-        //SALSA_STATIC_ASSERT(
-        //    size == sizeof(las_point_data_record_format1), invalid_size);
+        LAS_STATIC_ASSERT(1 == sizeof(int8),    invalid_int8_size);
+        LAS_STATIC_ASSERT(1 == sizeof(uint8),   invalid_uint8_size);
+        LAS_STATIC_ASSERT(2 == sizeof(int16),   invalid_int16_size);
+        LAS_STATIC_ASSERT(2 == sizeof(uint16),  invalid_uint16_size);
+        LAS_STATIC_ASSERT(4 == sizeof(int32),   invalid_int32_size);
+        LAS_STATIC_ASSERT(4 == sizeof(uint32),  invalid_uint32_size);
+        LAS_STATIC_ASSERT(8 == sizeof(float64), invalid_float64_size);
+        LAS_STATIC_ASSERT(size == sizeof(point_data_record_format1), 
+                          invalid_pdrf1_size); 
     }
 
-    // Default copy & assign.
+public:
 
-    int  
-    x() const 
-    { return _x; }
+    int32 x() const { return _x; }
+    int32 y() const { return _y; }
+    int32 z() const { return _z; }
 
-    int  
-    y() const 
-    { return _y; }
-
-    int
-    z() const 
-    { return _z; }
-
-    unsigned short 
+    uint16
     intensity() const 
     { return _intensity; }
 
-    unsigned char  
+    uint8  
     classification() const 
     { return _classification; }
 
-    char   
+    int8   
     scan_angle_rank() const	
     { return _scan_angle_rank; }
 
-    unsigned char  
+    uint8  
     file_marker() const	
     { return _file_marker; }
 
-    unsigned short
+    uint16
     user_bit_field() const 
     { return _user_bit_field;  }
 
-    double 
+    float64 
     gps_time() const 
     { return _gps_time; }
 
-    int   
-    gps_time_int() const 
-    { return std::floor(_gps_time); }
+    int32   
+    gps_time_int32() const 
+    { return static_cast<int32>(std::floor(_gps_time)); }
 
-private:
+public:     // Bit buffer.
 
-    point_data_record_format1();	// Empty CTOR - disabled.
+    uint8 
+    return_num() const 
+    { return _buf_return_num(_bit_buffer); }
 
-private:    // Constants.
+    uint8  
+    num_returns() const
+    { return _buf_num_returns(_bit_buffer); }
+
+    int8
+    scan_direction_flag() const
+    { return _buf_scan_dir_flag(_bit_buffer); }
+
+    uint8  
+    edge_flag() const
+    { return _buf_edge_flag(_bit_buffer); }
+
+private:    // Validation.
     
-    static const unsigned char _min_num_returns = 1;
-    static const unsigned char _min_return_num  = 1;
-    static const unsigned char _max_scan_dir    = 1;
-    static const unsigned char _max_edge_flag   = 1;
-
-private:    // Helper functions.
-    
-    static unsigned char 
-    _valid_num_returns(const unsigned char nr)
+    static uint8 
+    _valid_num_returns(const uint8 nr)
     {
-        if( nr < min_num_returns ||
-            nr > las_public_header_block::num_points_by_return_length ) {	
-            SALSA_THROW(
-                "las::PDRF1: invalid num_returns: " 
-                    << static_cast<int>(nr) << " [min: "
-                    << static_cast<int>(min_num_returns)
+        static const uint8 min_num_returns = 1;
+    
+        if (nr < min_num_returns ||
+            nr > public_header_block::num_points_by_return_length) {	
+            LAS_THROW(
+                "las::PDRF1: invalid number of returns: " 
+                    << static_cast<int32>(nr) << " [min: "
+                    << static_cast<int32>(min_num_returns)
                     << ", max:"
-                    << static_cast<int>(
-                        las_public_header_block::num_points_by_return_length)
+                    << static_cast<int32>(
+                        public_header_block::num_points_by_return_length)
                     << "]");
         }
 
         return nr;
     }
 
-    static unsigned char 
-    _valid_return_num(const unsigned char rn, const unsigned char nr)
+    static uint8 
+    _valid_return_num(const uint8 rn, const uint8 nr)
     {
-        if( rn < min_return_num || rn > nr ) {	
-            SALSA_THROW(
-                "LAS_PDRF1: invalid return_num: " 
-                    << static_cast<int>(rn) << " [min:" 
-                    << static_cast<int>(min_return_num) 
-                    << ", max:" << static_cast<int>(nr) << "]");
+        static const uint8 min_return_num = 1;
+
+        if (rn < min_return_num || rn > nr) {	
+            LAS_THROW(
+                "LAS_PDRF1: invalid return number: " 
+                    << static_cast<int32>(rn) << " [min:" 
+                    << static_cast<int32>(min_return_num) 
+                    << ", max:" << static_cast<int32>(nr) << "]");
         }
 
         return rn;
     }
 
-    static unsigned char 
-    _valid_scan_dir(const unsigned char scan_dir)
+    static uint8
+    _valid_scan_dir(const uint8 scan_dir)
     {
-        if( scan_dir > max_scan_dir ) {	
-            SALSA_THROW(
-                "las::PDRF1: invalid scan_dir: " 
-                    << static_cast<int64>(scan_dir) << " [max: "
-                    << static_cast<int64>(max_scan_dir) << "]");
+        static const uint8 max_scan_dir    = 1;
+
+        if (scan_dir > max_scan_dir) {	
+            LAS_THROW(
+                "las::PDRF1: invalid scan direction: " 
+                    << static_cast<int32>(scan_dir) << " [max: "
+                    << static_cast<int32>(max_scan_dir) << "]");
         }
 
         return scan_dir;
     }
 
-    static unsigned char 
-    _valid_edge_flag(const unsigned char edge)
+    static uint8 
+    _valid_edge_flag(const uint8 edge_flag)
     {
-        if (edge > max_edge_flag) {	
-            SALSA_THROW(
-                "las::PDRF1: invalid edge_flag: " 
-                    << static_cast<int>(edge) << " [max: "
-                    << static_cast<int>(max_edge_flag) << "]");	
+        static const uint8 max_edge_flag = 1;
+
+        if (edge_flag > max_edge_flag) {	
+            LAS_THROW(
+                "las::PDRF1: invalid edge flag: " 
+                    << static_cast<int32>(edge_flag) << " [max: "
+                    << static_cast<int32>(max_edge_flag) << "]");	
         }
 
-        return edge;
-    }
-    
-    //! Simple nearest integer rounding.
-    static int
-    _compute_coord(const double pos, 
-                   const double offset, 
-                   const double scale)
-    { return std::floor((pos - offset)/scale + 0.5); }
-
-    static char
-    _compute_bit_buffer(const unsigned char return_num,
-                        const unsigned char num_returns,
-                        const unsigned char scan_dir,
-                        const unsigned char edge_flag)
-    { 
-        const unsigned char vnum_returns(valid_num_returns(num_returns));
-        char buf(0);
-        buf += (vnum_returns							    << 5);
-        buf += (valid_return_num(return_num, vnum_returns)	<< 2);
-        buf += (valid_scan_dir(scan_dir)					<< 1);
-        buf += (valid_edge_flag(edge_flag)						);
-        return buf;
+        return edge_flag;
     }
 
-    static unsigned char 
-    _buf_return_num(const char buf) 
-    { return ((buf & 224) >> 5); }
-
-    static unsigned char 
-    _buf_num_returns(const char buf)
-    { return ((buf & 28)  >> 2); }
-
-    static unsigned char 
-    _buf_scan_dir_flag(const char buf)
-    { return ((buf & 2) >> 1); }
-
-    static unsigned char
-    _buf_edge_flag(const char buf)
-    { return  (buf & 1); }
-
-    static double 
-    _valid_gps_time(const double t)
+    static float64 
+    _valid_gps_time(const float64 t)
     {
-        static const double min_gps_time(0.0);
-        static const double max_gps_time((std::numeric_limits<int>::max)());
+        static const float64 min_gps_time(0.);
+        static const float64 max_gps_time((std::numeric_limits<int32>::max)());
 
-        if(	t > max_gps_time || t < min_gps_time ) {
-            SALSA_THROW(
-                "las::PDRF1: invalid gps_time: " << t << 
-                    " [min: " << min_gps_time << ", max:" << max_gps_time << "]"
-                       );
+        if (t > max_gps_time || t < min_gps_time) {
+            LAS_THROW(
+                "las::PDRF1: invalid GPS time: " << t << 
+                " [min: " << min_gps_time << ", max:" << max_gps_time << "]");
         }
 
         return t;
     }
 
+private:    // Position.
+
+    //! Simple nearest integer rounding.
+    static int32
+    _coord_int32(const float64 pos, 
+                 const float64 offset, 
+                 const float64 inv_scale)
+    { return static_cast<int32>(std::floor((pos - offset)*inv_scale + 0.5)); }
+
+private:    // Bit buffer.
+
+    static int8
+    _create_bit_buffer(const uint8 return_num,
+                       const uint8 num_returns,
+                       const uint8 scan_dir,
+                       const uint8 edge_flag)
+    { 
+        const uint8 vnum_returns(_valid_num_returns(num_returns));
+        int8 buf(0);
+        buf += (vnum_returns							    << 5);
+        buf += (_valid_return_num(return_num, vnum_returns)	<< 2);
+        buf += (_valid_scan_dir(scan_dir)					<< 1);
+        buf += (_valid_edge_flag(edge_flag)						);
+        return buf;
+    }
+
+    static uint8 
+    _buf_return_num(const int8 buf) 
+    { return ((buf & 224) >> 5); }
+
+    static uint8 
+    _buf_num_returns(const int8 buf)
+    { return ((buf & 28)  >> 2); }
+
+    static uint8 
+    _buf_scan_dir_flag(const int8 buf)
+    { return ((buf & 2) >> 1); }
+
+    static uint8
+    _buf_edge_flag(const int8 buf)
+    { return  (buf & 1); }
+
 private:	// Member variables.
 
-    int            _x;					// 4 bytes, required.
-    int            _y;					// 4 bytes, required.
-    int            _z;					// 4 bytes, required.
-    unsigned short _intensity;			// 2 bytes.
-    char           _bit_buffer;			// 1 byte.
-    unsigned char  _classification;		// 1 byte.
-    char           _scan_angle_rank;	// 1 byte, required.
-    unsigned char  _file_marker;		// 1 byte.
-    unsigned short _user_bit_field;		// 2 bytes.
-    double         _gps_time;           // 8 bytes.
+    int32   _x;					// 4 bytes, required.
+    int32   _y;					// 4 bytes, required.
+    int32   _z;					// 4 bytes, required.
+    uint16  _intensity;			// 2 bytes.
+    int8    _bit_buffer;		// 1 byte.
+    uint8   _classification;	// 1 byte.
+    int8    _scan_angle_rank;	// 1 byte, required.
+    uint8   _file_marker;		// 1 byte.
+    uint16  _user_bit_field;	// 2 bytes.
+    float64 _gps_time;          // 8 bytes.
 };
 
 //------------------------------------------------------------------------------
 
-#ifdef WIN32
 #pragma pack(pop)	// pack(1)
-#endif  // WIN32 
 
 //------------------------------------------------------------------------------
 
@@ -555,6 +580,8 @@ operator<<(basic_ostream<CharT,Traits>          &os,
 }
 
 }	// Namespace: std.
+
+//------------------------------------------------------------------------------
 
 #endif	// LAS_POINT_DATA_RECORD_FORMAT_HPP_INCLUDED
 

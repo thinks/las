@@ -8,6 +8,7 @@
 #ifndef LAS_SCAN_POINT_HPP_INCLUDED
 #define LAS_SCAN_POINT_HPP_INCLUDED
 
+#if 0
 #include "salsa_exception.hpp"
 #include <limits>
 #include <iostream>
@@ -402,5 +403,7 @@ operator<<(basic_ostream<CharT,Traits> &os,
 }
 
 }	// Namespace: std.
+
+#endif
 
 #endif	// SALSA_SCAN_POINT_HPP_INCLUDED
