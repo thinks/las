@@ -16,9 +16,8 @@ main(int argc, char* argv[])
     using std::cerr;
 
     try {
-        las::public_header_block phb;
         std::vector<las::point> points;
-        las::io::read("D:/las.git/test/data/test.las", phb, points);
+        las::io::read("D:/las.git/test/data/test.las", points);
 
         cerr << points[0];
 

@@ -31,15 +31,22 @@ public:
 
     static void
     read(const std::string                   &file_name,
-         public_header_block                 &phb,
          std::vector<point>                  &points,
-         std::vector<variable_length_record> *vlr = 0)
+         public_header_block                 *phb_ptr = 0,
+         std::vector<variable_length_record> *vlr_ptr = 0)
     {
-        ifstream ifs(file_name);                        // May throw.
-        _read_public_header_block(ifs, phb);            // May throw.
-        _read_variable_length_records(ifs, phb, vlr);   // May throw.
-        _read_point_data_start_signature(ifs);          // May throw.
-        _read_points(ifs, phb, points);                 // May throw.
+        ifstream ifs(file_name);                            // May throw.
+
+        public_header_block phb;
+        _read_public_header_block(ifs, phb);                // May throw.
+
+        if (0 != phb_ptr) {
+            *phb_ptr = phb;
+        }
+
+        _read_variable_length_records(ifs, phb, vlr_ptr);   // May throw.
+        _read_point_data_start_signature(ifs);              // May throw.
+        _read_points(ifs, phb, points);                     // May throw.
     }
 
     static void
@@ -67,6 +74,7 @@ private:
         ifs.stream().read(reinterpret_cast<char*>(&phb),
                           sizeof(public_header_block));
         // TODO: validate PHB!
+
     }
 
     static void
@@ -138,78 +146,65 @@ private:
         //assert(ifs.is_open());
         //assert(0 < phb.point_data_record_length());
 
-        const int currg(ifs.stream().tellg());	// Current get position in file.
-        ifs.stream().seekg(0, std::ios::end);	// Seek end-of-file.
-        const int file_size(ifs.stream().tellg());       // Bytes in file.
-        ifs.stream().seekg(currg, std::ios::beg); // Move back to current get pos.
+        const int currg(ifs.stream().tellg());	    // Current get position in file.
+        ifs.stream().seekg(0, std::ios::end);	    // Seek end-of-file.
+        const int file_size(ifs.stream().tellg());  // Bytes in file.
+        ifs.stream().seekg(currg, std::ios::beg);   // Move back to current get pos.
         const int remain_size(file_size - currg);	// Remaining bytes.
 
-        //assert(0 == remain_size%phb.point_data_record_length());
-        /*
-        if( 0 >= remain_size ) {	
-            // End of file reached.
+        if (0 == remain_size%phb.point_data_record_length()) {
+            const int remain_pdr(remain_size/phb.point_data_record_length());
 
-            num_buf_ = 0;
-            return 0; 
+            // Allocate enough memory to read one PDRF for each point.
+            //
+            std::vector<char> pdr(remain_size);
+            ifs.stream().read(&pdr[0], 
+                              static_cast<std::streamsize>(pdr.size())); 
+
+            points.clear();
+            points.reserve(remain_pdr);
+
         }
-        */
-
-        const int remain_pdr(remain_size/phb.point_data_record_length());
-        //const std::size_t nread(std::min<std::size_t>(remain_pdr, capacity()));
-
-        // Allocate enough memory to read one PDRF for each scan point.
-        //
-        std::vector<char> pdr(remain_size);
-        ifs.stream().read(&pdr[0], static_cast<std::streamsize>(pdr.size())); 
         
-        points.clear();
-        points.reserve(remain_pdr);
-
         switch(phb.point_data_format_id())
         {
         case 0:
-            for(std::size_t i(0); i < points.capacity(); ++i) {
-            	// Convert and assign.
-                try {
-                    typedef point_data_record_format0 pdrf0_type;
-                    points.push_back(
-                        point(
-                            phb, 
-                            reinterpret_cast<const pdrf0_type*>(&pdr[0])[i]));
-                }
-                catch( const std::exception& ex ) {	
-                    std::cerr << ex.what() << "\n";
-                }
-            }
+            _convert_pdrf<point_data_record_format0>(phb, pdr, points);
             break;
         case 1:
-            for(std::size_t i(0); i < points.capacity(); ++i) {
-            	// Convert and assign.
-                try {
-                    typedef point_data_record_format1 pdrf1_type;
-                    points.push_back(
-                        point(
-                            phb, 
-                            reinterpret_cast<const pdrf1_type*>(&pdr[0])[i]));
-                }
-                catch (const std::exception& ex) {
-                    std::cerr << ex.what() << "\n";
-                }
-            }
+            _convert_pdrf<point_data_record_format1>(phb, pdr, points);
             break;
-            /*
         default:
-            SALSA_THROW("las::io_buffer: invalid point data format id: " 
-                                        << phb.point_data_format_id());
-                                        */
+            LAS_THROW("Invalid point data format id: " 
+                      << phb.point_data_format_id());
         }
-
-        //return remain_pdr;
     }
 
     static void
     _write_points(ofstream &ofs)
     {}
+
+private:
+
+    template<typename PDRF>
+    static void
+    _convert_pdrf(const public_header_block &phb, 
+                  const std::vector<char>   &pdr, 
+                  std::vector<point>        &points)
+    {
+        const std::size_t n(sizeof(char)*pdr.size()*PDRF::size);
+        points.clear();
+        for(std::size_t i(0); i < n; ++i) {
+            // Convert and assign.
+            try {
+                points.push_back(
+                    point(phb, reinterpret_cast<const PDRF*>(&pdr[0])[i]));
+            }
+            catch (const std::exception &ex) {	
+                std::cerr << ex.what() << "\n";
+            }
+        }
+    }
 };
 
 //------------------------------------------------------------------------------
