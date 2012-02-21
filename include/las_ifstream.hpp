@@ -8,6 +8,7 @@
 #ifndef LAS_IFSTREAM_HPP_INCLUDED
 #define LAS_IFSTREAM_HPP_INCLUDED
 
+#include "las_namespace.hpp"
 #include "las_exception.hpp"
 #include <fstream>
 #include <string>
@@ -15,9 +16,7 @@
 
 //------------------------------------------------------------------------------
 
-namespace las {
-
-//------------------------------------------------------------------------------
+BEGIN_LAS_NAMESPACE
 
 class ifstream
 {
@@ -34,7 +33,6 @@ public:
     {	
         _init();
         open(file_name, mode);
-
     }
 
     //! DTOR.
@@ -51,7 +49,7 @@ public:
             _file_name = file_name;
             //_ifs.clear();
         }
-        catch(const std::ofstream::failure&) {
+        catch (...) {
             LAS_THROW("las::ifstream: failure opening: '" << file_name << "'");
         }
     }
@@ -73,7 +71,6 @@ public:
     file_name() const
     { return _file_name; }
 
-
     //! Expose std::ifstream for operators, etc.
     std::ifstream& 
     stream() 
@@ -82,9 +79,7 @@ public:
 private:
 
     static const std::ios_base::iostate default_exceptions = 
-        std::ofstream::eofbit | 
-        std::ofstream::failbit | 
-        std::ofstream::badbit;
+        std::ofstream::eofbit | std::ofstream::failbit | std::ofstream::badbit;
 
     void
     _init()
@@ -101,13 +96,11 @@ private:    // Member variables.
     std::string   _file_name;
 };
 
-//------------------------------------------------------------------------------
-
-}	// Namespace: las.
+END_LAS_NAMESPACE
 
 //------------------------------------------------------------------------------
 
-namespace std {
+BEGIN_STD_NAMESPACE
 
 template<class CharT, class Traits>
 basic_ostream<CharT,Traits>&
@@ -115,12 +108,12 @@ operator<<(basic_ostream<CharT,Traits> &os,
            const las::ifstream         &rhs)
 {
     os	<< "las::ifstream[0x" << &rhs << "]\n"
-        << "Open : " << (rhs.is_open() ? "true" : "false") << "\n"
+        << "Open      : " << (rhs.is_open() ? "true" : "false") << "\n"
         << "File name : '" << rhs.file_name() << "'\n";
     return os;
 }
 
-}   // Namespace: std.
+END_STD_NAMESPACE
 
 //------------------------------------------------------------------------------
 

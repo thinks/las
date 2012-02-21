@@ -8,6 +8,7 @@
 #ifndef LAS_OFSTREAM_HPP_INCLUDED
 #define LAS_OFSTREAM_HPP_INCLUDED
 
+#include "las_namespace.hpp"
 #include "las_exception.hpp"
 #include <fstream>
 #include <string>
@@ -15,9 +16,7 @@
 
 //------------------------------------------------------------------------------
 
-namespace las {
-
-//------------------------------------------------------------------------------
+BEGIN_LAS_NAMESPACE
 
 class ofstream
 {
@@ -51,7 +50,7 @@ public:
             _file_name = file_name;
             //ofs_.clear();
         }
-        catch(const std::ofstream::failure&) {
+        catch (...) {
             LAS_THROW("las::ofstream: failure opening: '" << file_name << "'");
         }
     }
@@ -99,13 +98,11 @@ private:    // Member variables.
     std::string   _file_name;
 };
 
-//------------------------------------------------------------------------------
-
-}	// Namespace: las.
+END_LAS_NAMESPACE
 
 //------------------------------------------------------------------------------
 
-namespace std {
+BEGIN_STD_NAMESPACE
 
 template<class CharT, class Traits>
 basic_ostream<CharT,Traits>&
@@ -118,7 +115,7 @@ operator<<(basic_ostream<CharT,Traits> &os,
     return os;
 }
 
-}   // Namespace: std.
+END_STD_NAMESPACE
 
 //------------------------------------------------------------------------------
 

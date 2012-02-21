@@ -8,14 +8,16 @@
 #ifndef LAS_STATIC_ASSERT_HPP_INCLUDED
 #define LAS_STATIC_ASSERT_HPP_INCLUDED
 
+#include "las_namespace.hpp"
+
 //------------------------------------------------------------------------------
+
+BEGIN_LAS_NAMESPACE
 
 // Lifted directly from:
 // Modern C++ Design: Generic Programming and Design Patterns Applied
 // Section 2.1
 // by Andrei Alexandrescu
-
-namespace las {
 
 template<bool> 
 class compile_time_check
@@ -28,7 +30,7 @@ template<>
 class compile_time_check<false> 
 {};
 
-}	// Namespace: las.
+END_LAS_NAMESPACE
 
 //------------------------------------------------------------------------------
 
@@ -48,5 +50,7 @@ do {                                                        \
 //#   define StaticAssert(test, errormsg)                         \
 //    do {} while (0)
 //#endif
+
+//------------------------------------------------------------------------------
 
 #endif	// LAS_STATIC_ASSERT_HPP_INCLUDED
