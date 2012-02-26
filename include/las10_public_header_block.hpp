@@ -102,66 +102,67 @@ operator<<(basic_ostream<CharT,Traits>      &os,
 {
     typedef las10::public_header_block phb_type;
     os	<< "las10::public_header_block[0x" << &rhs << "]\n"
-        << "sizeof(las10::public_header_block)  : " << sizeof(phb_type) << "\n"
-        << "File Signature ('LASF')           : '" 
+        << "sizeof(las10::public_header_block) : " 
+            << sizeof(phb_type) << " [bytes]\n"
+        << "File Signature ('LASF')            : '" 
             << string(rhs.file_signature, phb_type::file_signature_length) 
             << "'\n"
-        << "Reserved                          : " 
+        << "Reserved                           : " 
             << static_cast<int>(rhs.reserved) << "\n"
-        << "GUID data 1                       : " 
+        << "GUID data 1                        : " 
             << static_cast<int>(rhs.guid_data_1) << "\n"
-        << "GUID data 2                       : " 
+        << "GUID data 2                        : " 
             << static_cast<int>(rhs.guid_data_2) << "\n"
-        << "GUID data 3                       : " 
+        << "GUID data 3                        : " 
             << static_cast<int>(rhs.guid_data_3) << "\n";
-    os  << "GUID data 4                       : '";
+    os  << "GUID data 4                        : '";
     for (int i = 0; i < phb_type::guid_data_4_length; ++i) {
         os << static_cast<int>(rhs.guid_data_4[i]);
     }
-    os	<< "'\n"
-    os  << "Version Major                     : " 
+    os	<< "'\n";
+    os  << "Version Major                      : " 
             << static_cast<int>(rhs.version_major) << "\n"
-        << "Version Minor                     : " 
+        << "Version Minor                      : " 
             << static_cast<int>(rhs.version_minor) << "\n"
-        << "System Identifier                 : '" 
+        << "System Identifier                  : '" 
             << string(rhs.sys_identifier, phb_type::sys_identifier_length) 
             << "'\n"
-        << "Generating Software               : '" 
-            << string(rhs.gen_software, phb_type::gen_sotware_length) << "'\n"
-        << "Flight Date Julian                : " 
+        << "Generating Software                : '" 
+            << string(rhs.gen_software, phb_type::gen_software_length) << "'\n"
+        << "Flight Date Julian                 : " 
             << rhs.flight_date_julian << "\n"
-        << "Year                              : " 
+        << "Year                               : " 
             << rhs.year << "\n"
-        << "Header Size                       : " 
+        << "Header Size                        : " 
             << rhs.header_size << " [bytes]\n"
-        << "Offset to Data                    : " 
+        << "Offset to Data                     : " 
             << rhs.offset_to_data /*<< " | " << rhs.size_on_disk()*/ 
             << " [bytes]\n"
-        << "Number of Variable Length Records : " 
+        << "Number of Variable Length Records  : " 
             << rhs.num_variable_length_records << "\n"
-        << "Point Data Format ID              : " 
+        << "Point Data Format ID               : " 
             << static_cast<int>(rhs.point_data_format_id) << "\n"
-        << "Point Data Record Length          : " 
+        << "Point Data Record Length           : " 
             << rhs.point_data_record_length << "\n"
-        << "Number of Point Records           : " 
+        << "Number of Point Records            : " 
             << rhs.num_point_records << "\n"
         << "Number of Points by Return:\n";
     for (int i = 0; i < phb_type::num_points_by_return_length; ++i) {
-        os	<< "Return[" << i + 1 << "]                         : "
+        os	<< "Return[" << i + 1 << "]                          : "
                 << rhs.num_points_by_return[i] << "\n";
     }
-    os	<< "X Scale Factor                    : " << rhs.x_scale_factor <<"\n"
-        << "Y Scale Factor                    : " << rhs.y_scale_factor <<"\n"
-        << "Z Scale Factor                    : " << rhs.z_scale_factor <<"\n"
-        << "X Offset                          : " << rhs.x_offset << "\n"
-        << "Y Offset                          : " << rhs.y_offset << "\n"
-        << "Z Offset                          : " << rhs.z_offset << "\n"
-        << "Max X                             : " << rhs.max_x << "\n"
-        << "Min X                             : " << rhs.min_x << "\n"
-        << "Max Y                             : " << rhs.max_y << "\n"
-        << "Min Y                             : " << rhs.min_y << "\n"
-        << "Max Z                             : " << rhs.max_z << "\n"
-        << "Min Z                             : " << rhs.min_z << "\n";
+    os	<< "X Scale Factor                     : " << rhs.x_scale_factor <<"\n"
+        << "Y Scale Factor                     : " << rhs.y_scale_factor <<"\n"
+        << "Z Scale Factor                     : " << rhs.z_scale_factor <<"\n"
+        << "X Offset                           : " << rhs.x_offset << "\n"
+        << "Y Offset                           : " << rhs.y_offset << "\n"
+        << "Z Offset                           : " << rhs.z_offset << "\n"
+        << "Max X                              : " << rhs.max_x << "\n"
+        << "Min X                              : " << rhs.min_x << "\n"
+        << "Max Y                              : " << rhs.max_y << "\n"
+        << "Min Y                              : " << rhs.min_y << "\n"
+        << "Max Z                              : " << rhs.max_z << "\n"
+        << "Min Z                              : " << rhs.min_z << "\n";
     return os;
 }
 

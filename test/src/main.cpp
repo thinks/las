@@ -64,9 +64,17 @@ main(int argc, char* argv[])
 "D:/Dropbox/lidar/dublin-2007/tracks/las/ft/FT_856097413-856097447.las"
         };
 
+        for (int i = 0; i < 1; ++i) {
+            las10::public_header_block phb;
+            las10::read::header(ft[i], phb);
+            std::cerr << phb << "\n";
+            //std::cerr << "[" << i + 1 << "|44]: '" << ft[i] << "'\n";
+        }
+
+
         for (int i = 0; i < 44; ++i) {
             std::vector<las::point> points;
-            las10::read::file(ft[i], points);
+            las10::read::points(ft[i], points);
             std::cerr << "[" << i + 1 << "|44]: '" << ft[i] << "'\n";
         }
 

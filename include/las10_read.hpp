@@ -15,6 +15,7 @@
 #include "las_point.hpp"
 #include "las_ifstream.hpp"
 #include "las_exception.hpp"
+#include "las_static_assert.hpp"
 #include <vector>
 #include <string>
 
@@ -26,49 +27,64 @@ BEGIN_LAS10_NAMESPACE
 class read {
 public:
 
+    //! Read public header block from file. May throw.
     static void
-    file(const std::string                   &file_name,
-         std::vector<las::point>             &points,
-         public_header_block                 *phb_ptr = 0,
-         std::vector<variable_length_record> *vlr_ptr = 0)
+    header(const std::string &file_name, public_header_block &phb)
     {
-        las::ifstream ifs(file_name);                           // May throw.
+        las::ifstream ifs(file_name); // May throw.
+        _read_public_header_block(ifs.stream(), phb);
+    }
+
+    // TODO
+    //static void
+    //variable_length_records(const std::string &file_name, 
+    //                        std::vector<variable_length_record> *vlr_ptr)
+    //{}
+
+    //! Read points from file. May throw.
+    static void
+    points(const std::string                   &file_name,
+           std::vector<las::point>             &points,
+           public_header_block                 *phb_ptr = 0,
+           std::vector<variable_length_record> *vlr_ptr = 0)
+    {
+        las::ifstream ifs(file_name); // May throw.
         public_header_block phb;
         // TODO: set strings to null!
-        read_public_header_block(ifs, phb);                // May throw.
-
+        _read_public_header_block(ifs.stream(), phb); // May throw.
         if (0 != phb_ptr) {
             *phb_ptr = phb;
         }
 
-        _read_variable_length_records(ifs, phb, vlr_ptr);   // May throw.
-        _read_point_data_start_signature(ifs);              // May throw.
-        _read_points(ifs, phb, points);                     // May throw.
+        _read_variable_length_records(ifs.stream(), phb, vlr_ptr); // May throw.
+        _read_point_data_start_signature(ifs.stream());            // May throw.
+        _read_points(ifs.stream(), phb, points);                   // May throw.
     }
+
 
 public:     // Public header block.
 
     static void
-    read_public_header_block(las::ifstream &ifs, public_header_block &phb)
+    _read_public_header_block(std::ifstream &ifs, public_header_block &phb)
     {
-        ifs.stream().read(reinterpret_cast<char*>(&phb),
-                          sizeof(public_header_block));
-        // TODO: validate PHB!
+        LAS_STATIC_ASSERT(
+            sizeof(public_header_block) == public_header_block::size, 
+            invalid_PHB_size);
+        ifs.read(reinterpret_cast<char*>(&phb), sizeof(public_header_block)); 
     }
 
 private:    // Variable length records.
 
+    //! TODO
     static void
-    _read_variable_length_records(las::ifstream                       &ifs,
+    _read_variable_length_records(std::ifstream                       &ifs,
                                   const public_header_block           &phb,
                                   std::vector<variable_length_record> *vlr)
     {
         if (0 != vlr) {
         }
-        else {
-            // Skip past VLR data.
-
-            ifs.stream().seekg(
+        else { // Skip past VLR data.
+            ifs.seekg(
                 phb.offset_to_data - 
                 sizeof(public_header_block) - 
                 sizeof(uint16),
@@ -80,13 +96,13 @@ private:    // Point data start signature.
 
     static const uint16 _valid_point_data_start_signature = 52445; // 0xCCDD
 
+    //! Check post-header value. May throw.
     static void
-    _read_point_data_start_signature(las::ifstream &ifs)
+    _read_point_data_start_signature(std::ifstream &ifs)
     {
-        uint16 point_data_start_signature(0);
-        ifs.stream().read(reinterpret_cast<char*>(&point_data_start_signature),
-                          sizeof(uint16));
-
+        uint16 point_data_start_signature = 0;
+        ifs.read(reinterpret_cast<char*>(&point_data_start_signature),
+                 sizeof(uint16));
         if (point_data_start_signature != 
             _valid_point_data_start_signature) {
             LAS_THROW("Invalid point data start signature: "
@@ -100,7 +116,7 @@ private:    // Point data start signature.
 private:
 
     static void
-    _read_points(las::ifstream             &ifs,
+    _read_points(std::ifstream             &ifs,
                  const public_header_block &phb,
                  std::vector<las::point>   &points)
     {
@@ -108,8 +124,7 @@ private:
         if (pdr_length <= 0) {
             LAS_THROW("Invalid point data record length: " << pdr_length);
         }
-
-        const std::streamoff remain_bytes = _remaining_bytes(ifs.stream());
+        const std::streamoff remain_bytes = _remaining_bytes(ifs);
         if (remain_bytes%pdr_length != 0) {
             LAS_THROW("Invalid point data record alignment");
         }
@@ -117,8 +132,7 @@ private:
         // Read!
 
         std::vector<int8> pdr_buf(static_cast<std::size_t>(remain_bytes));
-        ifs.stream().read(&pdr_buf[0], pdr_buf.size()); 
-
+        ifs.read(&pdr_buf[0], pdr_buf.size()); 
         switch(phb.point_data_format_id)
         {
         case 0:
@@ -129,12 +143,12 @@ private:
             break;
         default:
             LAS_THROW("Invalid point data format id: " 
-                        << phb.point_data_format_id);
+                      << phb.point_data_format_id);
         }
     }
 
-private:
-
+    //! Return remaining bytes in file. Returns negative value if 
+    //! file is not open.
     static std::streamoff
     _remaining_bytes(std::ifstream &ifs)
     {
@@ -165,13 +179,16 @@ private:
                  std::vector<las::point>   &points)
     {
         const PDRF *pdr_ptr = reinterpret_cast<const PDRF*>(&pdr_buf[0]);
-        const std::size_t n = _pdr_count<PDRF>(pdr_buf);
+        int i;
+        const int n = static_cast<int>(_pdr_count<PDRF>(pdr_buf));
         points.resize(n);
-        for (std::size_t i = 0; i < n; ++i) {
+#pragma omp parallel for
+        for (i = 0; i < n; ++i) {
             _make_point(phb, pdr_ptr[i], points[i]);
         }
     }
 
+    //! Make point from PDRF0.
     static void
     _make_point(const public_header_block       &phb,
                 const point_data_record_format0 &pdrf0,
@@ -193,6 +210,7 @@ private:
         point.classification  = pdrf0.classification;
     }
 
+    //! Make point from PDRF1.
     static void
     _make_point(const public_header_block       &phb,
                 const point_data_record_format1 &pdrf1,
